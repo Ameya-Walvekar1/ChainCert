@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ChainCert — Academic Credential Verification{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <a href="{{ url_for('index') }}" class="logo-container">
+            <div class="logo-icon">C</div>
+            <div>
+                <div class="logo-title">CHAINCERT</div>
+                <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 500;">Academic Credential Verification</div>
+            </div>
+        </a>
+        <nav>
+            <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">Home</a>
+            <a href="{{ url_for('module1') }}" class="{% if request.endpoint == 'module1' %}active{% endif %}">M1: Records</a>
+            <a href="{{ url_for('module2') }}" class="{% if request.endpoint == 'module2' %}active{% endif %}">M2: Hasher</a>
+            <a href="{{ url_for('module3') }}" class="{% if request.endpoint == 'module3' %}active{% endif %}">M3: Merkle</a>
+            <a href="{{ url_for('module4') }}" class="{% if request.endpoint == 'module4' %}active{% endif %}">M4: Blocks</a>
+            <a href="{{ url_for('tamper_test') }}" class="{% if request.endpoint == 'tamper_test' %}active{% endif %}">Tamper Test</a>
+            <a href="{{ url_for('complete_demo') }}" class="{% if request.endpoint == 'complete_demo' %}active{% endif %}" style="color: var(--primary-cyan); font-weight: 600;">Run Complete Demo</a>
+        </nav>
+    </header>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <p>ChainCert — Tamper-Evident Academic Credential Verification System</p>
+        <p style="font-size: 0.75rem; margin-top: 0.25rem;">Department of AI & Data Science | MMCOE Pune | AY 2026–27</p>
+    </footer>
+</body>
+</html>

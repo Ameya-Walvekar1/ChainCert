@@ -1,0 +1,40 @@
+# Environment & secrets
+.env
+.env.local
+
+# Python virtual environment
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+
+# SQLite databases (contain PII / credentials)
+data/access_control.db
+data/ingestion.db
+data/chaincert.db
+data/chaincert.db.backup-*
+data/chain.json.backup-*
+
+# Frontend build output & dependencies
+frontend/node_modules/
+frontend/dist/
+
+# Large zipped archives
+*.zip
+
+# Backup files
+backups/
+
+# Vendored packages (install via pip -r requirements.txt)
+vendor_packages/
+
+# OS / Editor
+.DS_Store
+*.swp
+*.swo
+Thumbs.db

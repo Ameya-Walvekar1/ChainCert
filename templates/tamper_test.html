@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}ChainCert — Tamper Testing Suite{% endblock %}
+
+{% block content %}
+<div class="page-title-section">
+    <h1 class="page-title">TAMPER TESTING SUITE</h1>
+    <p class="page-subtitle">Empirical Security Validation for Certificate Records & Block Headers</p>
+</div>
+
+<!-- TEST 1: CERTIFICATE DATA TAMPERING -->
+<div style="background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; margin-bottom: 2.5rem;">
+    <h3 style="color: #ffffff; margin-bottom: 0.5rem;">Test 1: Certificate Data Tampering</h3>
+    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.25rem;">
+        Tests how a 1-character modification in a certificate field (e.g., CGPA 9.20 → 9.99) breaks the SHA-256 hash and invalidates Merkle tree integrity.
+    </p>
+
+    <form action="{{ url_for('run_cert_tamper_test') }}" method="POST" style="margin-bottom: 1.25rem;">
+        <button type="submit" class="btn btn-primary">▶ RUN CERTIFICATE TAMPER TEST</button>
+    </form>
+
+    {% if cert_tamper %}
+        <div style="background: #0f172a; border: 1px solid var(--border-color); border-radius: 8px; padding: 1.25rem;">
+            <div class="alert alert-success" style="margin-bottom: 1.25rem;">
+                <strong>PASS — HASH ALTERATION & TAMPERING DETECTED</strong>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.25rem;">
+                <div>
+                    <h5 style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 0.4rem;">ORIGINAL RECORD (CGPA = 9.20)</h5>
+                    <div class="code-box" style="font-size: 0.8rem; color: #34d399;">Hash A: {{ cert_tamper.hash_a }}</div>
+                </div>
+                <div>
+                    <h5 style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 0.4rem;">MODIFIED RECORD (CGPA = 9.99)</h5>
+                    <div class="code-box" style="font-size: 0.8rem; color: #f87171;">Hash B: {{ cert_tamper.hash_b }}</div>
+                </div>
+            </div>
+
+            <!-- VISUAL EXPLANATION FLOW -->
+            <div style="background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.2); border-radius: 8px; padding: 1rem;">
+                <h5 style="color: var(--primary-cyan); font-size: 0.85rem; margin-bottom: 0.75rem;">INTEGRATION IMPACT EXPLANATION FLOW:</h5>
+                <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; flex-wrap: wrap; gap: 0.5rem; text-align: center;">
+                    <div style="background: var(--panel-bg); padding: 0.6rem 0.9rem; border-radius: 6px;">Certificate Data Changed</div>
+                    <div style="color: var(--primary-cyan);">➔</div>
+                    <div style="background: var(--panel-bg); padding: 0.6rem 0.9rem; border-radius: 6px; color: #f87171;">Module 2 Hash Changed</div>
+                    <div style="color: var(--primary-cyan);">➔</div>
+                    <div style="background: var(--panel-bg); padding: 0.6rem 0.9rem; border-radius: 6px; color: #f59e0b;">Merkle Root Would Change</div>
+                    <div style="color: var(--primary-cyan);">➔</div>
+                    <div style="background: var(--panel-bg); padding: 0.6rem 0.9rem; border-radius: 6px; color: #ef4444; font-weight: 600;">Original Proof Verification FAILS</div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- TEST 2: BLOCK CHAIN HEADER TAMPERING -->
+<div style="background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem;">
+    <h3 style="color: #ffffff; margin-bottom: 0.5rem;">Test 2: Block Chain Header Tampering</h3>
+    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.25rem;">
+        Creates a valid block chain, forcibly modifies a block field (<code style="color: #a5f3fc;">previous_root</code>), and executes Module 4's real <code style="color: #a5f3fc;">validate_chain()</code> method to capture the exact tamper error.
+    </p>
+
+    <form action="{{ url_for('run_block_tamper_test') }}" method="POST" style="margin-bottom: 1.25rem;">
+        <button type="submit" class="btn btn-primary">▶ RUN BLOCK TAMPER TEST</button>
+    </form>
+
+    {% if block_tamper %}
+        <div style="background: #0f172a; border: 1px solid var(--border-color); border-radius: 8px; padding: 1.25rem;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.25rem;">
+                <!-- BEFORE TAMPERING -->
+                <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 1rem;">
+                    <h5 style="color: var(--accent-green); font-size: 0.9rem; margin-bottom: 0.5rem;">BEFORE TAMPERING</h5>
+                    <div style="font-size: 0.85rem; font-weight: 600; color: #ffffff; margin-bottom: 0.4rem;">
+                        CHAIN STATUS: <span style="color: var(--accent-green);">VALID</span>
+                    </div>
+                    <p style="font-size: 0.8rem; color: var(--text-muted);">
+                        All blocks correctly linked via previous_root, block header hashes verified cleanly.
+                    </p>
+                </div>
+
+                <!-- AFTER TAMPERING -->
+                <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 1rem;">
+                    <h5 style="color: var(--accent-red); font-size: 0.9rem; margin-bottom: 0.5rem;">AFTER TAMPERING</h5>
+                    <div style="font-size: 0.85rem; font-weight: 600; color: #ffffff; margin-bottom: 0.4rem;">
+                        CHAIN STATUS: <span style="color: var(--accent-red);">INVALID</span>
+                    </div>
+                    <p style="font-size: 0.8rem; color: var(--text-muted);">
+                        Block 2's previous_root forcibly overwritten with fake root string.
+                    </p>
+                </div>
+            </div>
+
+            <!-- ACTUAL MODULE 4 VALIDATION ERROR -->
+            <label style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 0.3rem;">ACTUAL MODULE 4 validate_chain() ERROR REPORT:</label>
+            <div class="code-box" style="color: #f87171; font-size: 0.85rem;">
+                {% for err in block_tamper.errors %}
+                    - {{ err }}<br>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

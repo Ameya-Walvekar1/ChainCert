@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block title %}Module 3 — Merkle Tree Builder{% endblock %}
+
+{% block content %}
+<!-- PIPELINE STEP INDICATOR BAR -->
+<div style="background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem 1.5rem; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+    <div style="font-weight: 700; color: var(--primary-cyan); font-size: 0.9rem; text-transform: uppercase;">Pipeline Tracker:</div>
+    <div style="display: flex; gap: 0.75rem; font-size: 0.85rem; flex-wrap: wrap; align-items: center;">
+        <span style="color: var(--text-muted);">1. Form Entry</span>
+        <span style="color: var(--text-muted);">➔</span>
+        <span style="color: var(--text-muted);">2. SHA-256 Hasher</span>
+        <span style="color: var(--text-muted);">➔</span>
+        <span style="background: var(--primary-cyan); color: #0f172a; font-weight: 700; padding: 0.3rem 0.7rem; border-radius: 20px;">3. Merkle Tree (Active)</span>
+        <span style="color: var(--text-muted);">➔</span>
+        <span style="color: var(--text-muted);">4. Block Chaining</span>
+    </div>
+</div>
+
+<div class="page-title-section">
+    <h1 class="page-title">MODULE 3: Merkle Tree Builder</h1>
+    <p class="page-subtitle">Binary Merkle Tree Construction, Student Certificate Grouping & Proof Verification</p>
+</div>
+
+<!-- EXPLANATION CARD: WHAT HAPPENS WHEN YOU CLICK GENERATE TREE -->
+<div class="info-card">
+    <h4>💡 What happens when you click "Build Merkle Tree"?</h4>
+    <p style="margin-bottom: 0.5rem;">
+        When you generate the Merkle Tree, Module 3 executes a 3-step cryptographic grouping process:
+    </p>
+    <ol style="margin-left: 1.5rem; font-size: 0.88rem; color: var(--text-muted);">
+        <li><strong>Step 1 (Leaf Level):</strong> Retrieves the Module 2 SHA-256 hash for every student certificate in the batch (e.g. Rahul Sharma, Priya Patel, Amit Verma, Sneha Kulkarni).</li>
+        <li><strong>Step 2 (Pair & Combine):</strong> Combines hashes in pairs (e.g. <code>Hash(Rahul) + Hash(Priya)</code>) and hashes the combined string to form Parent Nodes.</li>
+        <li><strong>Step 3 (Merkle Root):</strong> Repeats pairing upwards level-by-level until <strong>ONE single master 64-character Merkle Root</strong> is generated at the top!</li>
+    </ol>
+</div>
+
+<!-- BATCH CONTROL & SUMMARY -->
+<div style="background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h3 style="color: #ffffff; margin-bottom: 0.25rem;">Active Batch: <span style="color: var(--primary-cyan);">{{ batch_id }}</span></h3>
+        <p style="color: var(--text-muted); font-size: 0.88rem;">
+            Student Certificates in Batch: <strong>{{ tree.leaf_count }}</strong> &nbsp;|&nbsp;
+            Tree Height: <strong>{{ tree.height }}</strong> &nbsp;|&nbsp;
+            Odd Leaf Policy: <strong>promote-unpaired</strong>
+        </p>
+    </div>
+    <form action="{{ url_for('module3_build') }}" method="POST" style="display: flex; gap: 0.5rem;">
+        <select name="selected_batch" class="form-control" style="width: auto;">
+            <option value="SEM1_2026" {% if batch_id == 'SEM1_2026' %}selected{% endif %}>Batch SEM1_2026 (4 Students)</option>
+            <option value="ODD_BATCH_2026" {% if batch_id == 'ODD_BATCH_2026' %}selected{% endif %}>Batch ODD_BATCH_2026 (5 Students)</option>
+        </select>
+        <button type="submit" class="btn btn-primary">🔨 BUILD MERKLE TREE</button>
+    </form>
+</div>
+
+<!-- CERTIFICATE TO LEAF MAPPING TABLE WITH NAMES -->
+<h3 style="font-size: 1.2rem; margin-bottom: 1rem; color: #ffffff;">Student Certificates Included in this Merkle Tree</h3>
+
+<div class="table-container" style="margin-bottom: 2rem;">
+    <table>
+        <thead>
+            <tr>
+                <th>Leaf Position</th>
+                <th>Cert ID</th>
+                <th>Student Name</th>
+                <th>Roll No</th>
+                <th>Course</th>
+                <th>CGPA</th>
+                <th>Module 2 SHA-256 Digest (Leaf Hash)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for cert in batch_certs %}
+                <tr>
+                    <td><span class="card-badge badge-working" style="margin:0;">Leaf {{ loop.index0 }}</span></td>
+                    <td><strong style="color: #a5f3fc;">{{ cert.certificate_id }}</strong></td>
+                    <td><strong style="color: #ffffff;">{{ cert.student_name }}</strong></td>
+                    <td>{{ cert.roll_number }}</td>
+                    <td>{{ cert.course }}</td>
+                    <td>{{ cert.cgpa }}</td>
+                    <td><span class="hash-highlight" style="font-family: monospace; font-size: 0.85rem;">{{ cert.certificate_hash }}</span></td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- MERKLE ROOT DISPLAY & NEXT ACTION -->
+<div style="background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: 12px; padding: 1.5rem; margin-bottom: 2.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem;">
+    <div style="flex: 1; min-width: 300px;">
+        <div style="font-size: 0.75rem; color: var(--primary-cyan); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem;">
+            FINAL COMPUTED MERKLE ROOT (PASSES TO MODULE 4 FOR BLOCK CHAINING)
+        </div>
+        <div class="code-box" style="font-size: 1.05rem; color: #ffffff; font-weight: 700;">{{ tree.merkle_root }}</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">
+            Single 64-character master fingerprint summarizing all {{ tree.leaf_count }} student certificates.
+        </div>
+    </div>
+    <div>
+        <a href="{{ url_for('module4') }}" class="btn btn-primary" style="font-size: 1rem; padding: 0.8rem 1.5rem;">
+            ➡️ Proceed to Module 4: Block Chaining →
+        </a>
+    </div>
+</div>
+
+<!-- GRAPHICAL MERKLE TREE REPRESENTATION WITH STUDENT NAMES & ARROWS -->
+<h3 style="font-size: 1.2rem; margin-bottom: 1rem; color: #ffffff;">Interactive Merkle Tree Diagram (With Student Names & Hashes)</h3>
+
+<div class="tree-container">
+    <div class="tree-level-container">
+        <!-- ROOT LEVEL -->
+        <div style="text-align: center; font-size: 0.75rem; color: var(--primary-cyan); font-weight: 700; margin-bottom: -0.25rem;">
+            TOP LEVEL: MASTER MERKLE ROOT
+        </div>
+        <div class="tree-level">
+            <div class="tree-node root">
+                <div class="node-title">MERKLE ROOT</div>
+                <div class="node-student-name" style="color: var(--primary-cyan);">Batch Fingerprint</div>
+                <div class="node-hash">{{ tree.merkle_root[:20] }}...</div>
+            </div>
+        </div>
+
+        <div class="tree-connector-row">
+            <span>↑ Combined SHA-256 Parent Hash ↑</span>
+        </div>
+
+        <!-- MIDDLE LEVELS IF ANY -->
+        {% if tree.height > 1 %}
+            <div style="text-align: center; font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">
+                LEVEL 1: PARENT COMBINED NODES
+            </div>
+            <div class="tree-level">
+                {% for node in tree.levels[1] %}
+                    <div class="tree-node">
+                        <div class="node-title">Parent Node [{{ loop.index0 }}]</div>
+                        <div class="node-student-name">Combined Pair Hash</div>
+                        <div class="node-hash">{{ node[:16] }}...</div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="tree-connector-row">
+                <span>↑ Paired & Hashed Leaf Digests ↑</span>
+            </div>
+        {% endif %}
+
+        <!-- LEAF LEVEL 0 -->
+        <div style="text-align: center; font-size: 0.75rem; color: var(--accent-green); font-weight: 700;">
+            LEVEL 0: LEAF NODES (STUDENT CERTIFICATE SHA-256 HASHES FROM MODULE 2)
+        </div>
+        <div class="tree-level" style="flex-wrap: wrap;">
+            {% for cert in batch_certs %}
+                <div class="tree-node leaf">
+                    <div class="node-title">Leaf [{{ loop.index0 }}] — {{ cert.certificate_id }}</div>
+                    <div class="node-student-name">🎓 {{ cert.student_name }}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">CGPA: {{ cert.cgpa }}</div>
+                    <div class="node-hash" title="{{ cert.certificate_hash }}">{{ cert.certificate_hash[:16] }}...</div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- PROOF PATH EXPLORER -->
+<div style="background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+    <h3 style="margin-bottom: 0.5rem; color: #ffffff;">Individual Student Membership Verification</h3>
+    <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 1.25rem;">
+        Select a student certificate to trace how their individual SHA-256 hash verifies against the Merkle Root without revealing other certificates.
+    </p>
+
+    <form action="{{ url_for('module3_verify_proof') }}" method="POST" style="margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: flex-end;">
+        <input type="hidden" name="batch_id" value="{{ batch_id }}">
+        <div class="form-group" style="margin: 0; flex: 1;">
+            <label>Target Student Certificate</label>
+            <select name="selected_cert_id" class="form-control">
+                {% for cert in batch_certs %}
+                    <option value="{{ cert.certificate_id }}" {% if selected_cert_id == cert.certificate_id %}selected{% endif %}>
+                        {{ cert.certificate_id }} — {{ cert.student_name }} (Roll: {{ cert.roll_number }})
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">🔍 VERIFY STUDENT MEMBERSHIP PROOF</button>
+    </form>
+
+    {% if proof_verification %}
+        <div style="background: #0f172a; border: 1px solid var(--border-color); border-radius: 8px; padding: 1.25rem;">
+            <div class="alert alert-{% if proof_verification.is_valid %}success{% else %}danger{% endif %}" style="margin-bottom: 1rem;">
+                <strong style="font-size: 1.1rem;">
+                    {% if proof_verification.is_valid %}
+                        ✓ MERKLE PROOF: VALID — Student {{ proof_verification.cert.student_name }} ({{ proof_verification.cert.certificate_id }}) is a Verified Member of this Batch!
+                    {% else %}
+                        ✗ MERKLE PROOF: INVALID
+                    {% endif %}
+                </strong>
+            </div>
+
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+                Student: <strong style="color: #ffffff;">{{ proof_verification.cert.student_name }}</strong> |
+                Cert ID: <strong style="color: #a5f3fc;">{{ proof_verification.cert.certificate_id }}</strong> |
+                Leaf Hash: <span class="hash-highlight" style="font-family: monospace;">{{ proof_verification.leaf_hash }}</span>
+            </p>
+
+            <h5 style="color: #ffffff; font-size: 0.85rem; margin-bottom: 0.5rem;">Verification Steps (Traversing Upwards to Root):</h5>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                {% for step in proof_verification.proof_steps %}
+                    <div style="background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.75rem; font-size: 0.85rem; font-family: monospace;">
+                        <span style="color: var(--primary-cyan); font-weight: 600;">Step {{ loop.index }}:</span>
+                        Combine current hash with sibling hash on the <strong style="color: #fbbf24;">{{ step.position }}</strong> $\rightarrow$
+                        Sibling: <span style="color: #a5f3fc;">{{ step.hash[:24] }}...</span>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

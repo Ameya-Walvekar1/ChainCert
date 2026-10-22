@@ -1,0 +1,273 @@
+========== ENVIRONMENT ==========
+/home/ameya/ChainCert_Demo/EDIL1
+
+========== BACKUP FILES ==========
+-rw-r--r-- 1 ameya ameya  48K Oct 21 00:27 data/access_control.db
+-rw-r--r-- 1 ameya ameya  48K Oct 21 00:08 data/chaincert.db
+-rw-rw-r-- 1 ameya ameya 1.7K Oct 20 23:09 data/chain.json
+-rw-r--r-- 1 ameya ameya  28K Oct 21 00:09 data/ingestion.db
+
+========== BACKEND ROUTES ==========
+109:def ensure_sample_certificates():
+122:@app.route("/")
+127:@app.route("/module1")
+139:@app.route("/module1/register", methods=["POST"])
+179:@app.route("/module1/sample/<int:sample_id>")
+189:@app.route("/module2")
+208:@app.route("/module2/tamper", methods=["POST"])
+260:@app.route("/module3")
+266:def _render_module3(batch_id, selected_cert_id=None, proof_verification=None):
+302:@app.route("/module3/build", methods=["POST"])
+308:@app.route("/module3/verify_proof", methods=["POST"])
+335:@app.route("/module4")
+361:@app.route("/module4/add_batch", methods=["POST"])
+362:def module4_add_batch():
+383:@app.route("/tamper-test")
+388:@app.route("/tamper-test/cert", methods=["POST"])
+413:@app.route("/tamper-test/block", methods=["POST"])
+438:@app.route("/demo")
+444:@app.route("/demo/run", methods=["POST", "GET"])
+
+========== MERKLE / BATCH IMPLEMENTATION ==========
+chaincert/records/certificate.py:27:    merkle_root: Optional[str] = None
+chaincert/records/certificate.py:28:    merkle_proof: Optional[str] = None  # JSON string
+chaincert/records/certificate.py:47:        if self.merkle_proof and isinstance(self.merkle_proof, str):
+chaincert/records/certificate.py:49:                d["merkle_proof_parsed"] = json.loads(self.merkle_proof)
+chaincert/records/certificate.py:51:                d["merkle_proof_parsed"] = None
+chaincert/records/database.py:59:            merkle_root TEXT,
+chaincert/records/database.py:60:            merkle_proof TEXT,
+chaincert/records/database.py:71:            merkle_root TEXT NOT NULL,
+chaincert/records/database.py:153:    if res.get("merkle_proof"):
+chaincert/records/database.py:155:            res["merkle_proof_parsed"] = json.loads(res["merkle_proof"])
+chaincert/records/database.py:157:            res["merkle_proof_parsed"] = None
+chaincert/records/database.py:178:        if d.get("merkle_proof"):
+chaincert/records/database.py:180:                d["merkle_proof_parsed"] = json.loads(d["merkle_proof"])
+chaincert/records/database.py:182:                d["merkle_proof_parsed"] = None
+chaincert/records/database.py:240:def assign_batch_and_proofs(
+chaincert/records/database.py:242:    merkle_root: str,
+chaincert/records/database.py:260:                merkle_root = ?,
+chaincert/records/database.py:261:                merkle_proof = ?,
+chaincert/records/database.py:265:        """, (batch_id, merkle_root, proof_json, now, cert_id))
+chaincert/records/database.py:269:        INSERT OR REPLACE INTO batches (batch_id, certificate_count, merkle_root, created_at)
+chaincert/records/database.py:271:    """, (batch_id, len(proof_map), merkle_root, now))
+chaincert/records/database.py:277:def update_batch_block_id(batch_id: str, block_id: int, db_path: Optional[str] = None) -> None:
+chaincert/chain/models.py:54:        certificate_count: Number of certificates summarized by ``merkle_root``.
+chaincert/chain/models.py:55:        merkle_root: Module 3's Merkle root for this batch (64 lowercase hex).
+chaincert/chain/models.py:56:        previous_root: The previous block's ``merkle_root``, or ``None`` for
+chaincert/chain/models.py:63:            only proves that a block's *merkle_root* wasn't swapped after the
+chaincert/chain/models.py:75:    merkle_root: str
+chaincert/chain/models.py:86:        merkle_root: str,
+chaincert/chain/models.py:104:                same ``merkle_root``.
+chaincert/chain/models.py:105:            merkle_root: The Merkle root Module 3 computed for this batch.
+chaincert/chain/models.py:108:            previous_root: The previous block's ``merkle_root``, or ``None``
+chaincert/chain/models.py:115:            InvalidHashError: If ``merkle_root`` or ``previous_root`` is not a
+chaincert/chain/models.py:121:        merkle_root = validate_hash(merkle_root, label="merkle_root")
+chaincert/chain/models.py:133:            merkle_root=merkle_root,
+chaincert/chain/models.py:142:            merkle_root=merkle_root,
+chaincert/chain/models.py:158:            merkle_root=self.merkle_root,
+chaincert/chain/models.py:169:            "merkle_root": self.merkle_root,
+chaincert/chain/models.py:198:            "merkle_root",
+chaincert/chain/models.py:214:                merkle_root=data["merkle_root"],
+chaincert/chain/models.py:219:            # from_dict must be able to load a block whose merkle_root/
+chaincert/chain/models.py:227:                merkle_root=str(data["merkle_root"]),
+chaincert/chain/hashing_backend.py:29:    merkle_root: str,
+chaincert/chain/hashing_backend.py:43:    ``merkle_root`` as a genuine (but different) ``previous_root`` value.
+chaincert/chain/hashing_backend.py:47:    prior block's ``merkle_root``). This is a separate, per-block fingerprint
+chaincert/chain/hashing_backend.py:59:            merkle_root,
+chaincert/chain/chain.py:5:(``MerkleTree.to_dict()["merkle_root"]``), wraps it in a :class:`Block`, and
+chaincert/chain/chain.py:102:    def add_batch(
+chaincert/chain/chain.py:106:        merkle_root: str,
+chaincert/chain/chain.py:115:        ``merkle_root`` for every block after that. Callers never set
+chaincert/chain/chain.py:121:            merkle_root: The Merkle root Module 3 computed for this batch —
+chaincert/chain/chain.py:122:                typically ``build_merkle_tree(leaf_hashes).merkle_root`` or
+chaincert/chain/chain.py:123:                ``build_merkle_tree(leaf_hashes).to_dict()["merkle_root"]``.
+chaincert/chain/chain.py:133:        previous_root = self.latest_block.merkle_root if self._blocks else None
+chaincert/chain/chain.py:138:            merkle_root=merkle_root,
+chaincert/chain/chain.py:156:        or ``dataclasses.replace(original, merkle_root=...)``, install it
+chaincert/chain/chain.py:208:           ``block[i-1].merkle_root`` (and must be ``None`` for block 1).
+chaincert/chain/chain.py:214:           ``block_hash``. This catches a block whose ``merkle_root``,
+chaincert/chain/chain.py:250:                    f"merkle_root, or previous_root was modified after creation)."
+chaincert/chain/chain.py:261:                if block.previous_root != previous_block.merkle_root:
+chaincert/chain/chain.py:265:                        f"{previous_block.block_id}'s merkle_root="
+chaincert/chain/chain.py:266:                        f"{previous_block.merkle_root!r}."
+chaincert/verification/engine.py:12:from chaincert.merkle import verify_merkle_proof
+chaincert/verification/engine.py:72:            "merkle_proof_available": bool(trusted_record.get("merkle_proof") and trusted_record.get("merkle_root")),
+chaincert/verification/engine.py:73:            "merkle_proof_valid": None,
+chaincert/verification/engine.py:78:        proof_available = details["merkle_proof_available"]
+chaincert/verification/engine.py:81:                proof = trusted_record.get("merkle_proof_parsed") or trusted_record.get("merkle_proof")
+chaincert/verification/engine.py:85:                details["merkle_proof_valid"] = bool(verify_merkle_proof(trusted_hash_stored, proof, trusted_record["merkle_root"]))
+chaincert/verification/engine.py:89:                    batch_root_matches = any(b.merkle_root == trusted_record.get("merkle_root") for b in batch_blocks)
+chaincert/verification/engine.py:99:                details["merkle_proof_valid"] = False
+chaincert/verification/engine.py:107:            "merkle_proof_valid": details["merkle_proof_valid"],
+chaincert/verification/engine.py:116:        elif details["merkle_proof_valid"] is False or details["chain_valid"] is False:
+chaincert/merkle/__init__.py:13:    compute_merkle_root,
+chaincert/merkle/__init__.py:19:    verify_merkle_proof,
+chaincert/merkle/__init__.py:46:    "compute_merkle_root",
+chaincert/merkle/__init__.py:50:    "verify_merkle_proof",
+chaincert/merkle/proof.py:131:def verify_merkle_proof(
+chaincert/merkle/proof.py:197:    "verify_merkle_proof",
+chaincert/merkle/models.py:85:        levels: ``levels[0]`` is the leaves; ``levels[-1] == [merkle_root]``.
+chaincert/merkle/models.py:99:    def merkle_root(self) -> str:
+chaincert/merkle/models.py:139:            "merkle_root": self.merkle_root,
+chaincert/merkle/tree.py:62:def build_merkle_tree(leaf_hashes: Sequence[str]) -> MerkleTree:
+chaincert/merkle/tree.py:78:        A :class:`MerkleTree` exposing ``merkle_root``, ``leaves``, ``levels``,
+chaincert/merkle/tree.py:87:        >>> tree.merkle_root
+chaincert/merkle/tree.py:102:def compute_merkle_root(leaf_hashes: Sequence[str]) -> str:
+chaincert/merkle/tree.py:105:    Equivalent to ``build_merkle_tree(leaf_hashes).merkle_root``. Provided for
+chaincert/merkle/tree.py:108:    return build_merkle_tree(leaf_hashes).merkle_root
+chaincert/merkle/tree.py:111:__all__ = ["reduce_level", "build_merkle_tree", "compute_merkle_root"]
+
+========== AUTHENTICATION ==========
+chaincert/auth/storage.py:6:CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT,email TEXT NOT NULL UNIQUE COLLATE NOCASE,display_name TEXT NOT NULL,password_hash TEXT NOT NULL,totp_secret TEXT, email_verified INTEGER NOT NULL DEFAULT 0 CHECK(email_verified IN(0,1)),role TEXT NOT NULL CHECK(role IN('PLATFORM_ADMIN','INSTITUTION_ADMIN','ISSUER','STUDENT','PUBLIC_VERIFIER')),institution_id INTEGER REFERENCES institutions(id),active INTEGER NOT NULL DEFAULT 1 CHECK(active IN(0,1)),created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+chaincert/auth/storage.py:7:CREATE TABLE IF NOT EXISTS login_attempts(
+chaincert/auth/service.py:13: def __init__(self,database_path:str,token_secret:str,token_max_age_seconds:int=3600, max_login_attempts:int=5, login_window_seconds:int=300):
+chaincert/auth/service.py:16:  self.max_age=token_max_age_seconds; self.max_login_attempts=max_login_attempts; self.login_window_seconds=login_window_seconds
+chaincert/auth/service.py:29:    if actor.role==Role.PLATFORM_ADMIN: pass
+chaincert/auth/service.py:30:    elif actor.role==Role.INSTITUTION_ADMIN:
+chaincert/auth/service.py:34:   if role==Role.PLATFORM_ADMIN and institution_id is not None: raise ValueError("PLATFORM_ADMIN cannot be institution-bound")
+chaincert/auth/service.py:35:   if role not in {Role.PLATFORM_ADMIN,Role.PUBLIC_VERIFIER} and institution_id is None: raise ValueError("This role requires institution_id")
+chaincert/auth/service.py:39:   cur=c.execute("INSERT INTO users(email,display_name,password_hash,role,institution_id) VALUES(?,?,?,?,?)",
+chaincert/auth/service.py:79:  con.execute("DELETE FROM login_attempts WHERE attempted_at < ?",(now-self.login_window_seconds,))
+chaincert/auth/service.py:80:  row=con.execute("SELECT COUNT(*) n FROM login_attempts WHERE email=? COLLATE NOCASE AND success=0 AND attempted_at>=?",(email,now-self.login_window_seconds)).fetchone()
+chaincert/auth/service.py:81:  return row["n"] >= self.max_login_attempts
+chaincert/auth/service.py:84:  con.execute("INSERT INTO login_attempts(email,attempted_at,success) VALUES(?,?,?)",(email,now,int(success)))
+chaincert/auth/service.py:115:   c.execute("UPDATE users SET password_hash=? WHERE id=?",(new_hash,row["user_id"]))
+chaincert/auth/service.py:147: def login(self,email,password, mfa_code: str | None = None)->str:
+chaincert/auth/service.py:156:   password_ok = bool(row and row["active"] and verify_password(password,row["password_hash"]))
+chaincert/auth/service.py:188:   if user.role!=Role.PLATFORM_ADMIN and target_institution_id is not None and user.institution_id!=target_institution_id:
+chaincert/auth/service.py:197:   if not (actor.role==Role.PLATFORM_ADMIN or (actor.role==Role.INSTITUTION_ADMIN and actor.institution_id==target["institution_id"])):
+chaincert/auth/service.py:206:   if actor.role!=Role.PLATFORM_ADMIN: raise AccessDenied("Only PLATFORM_ADMIN can change roles")
+chaincert/auth/service.py:207:   if new_role==Role.PLATFORM_ADMIN and new_institution_id is not None: raise ValueError("PLATFORM_ADMIN cannot be institution-bound")
+chaincert/auth/service.py:208:   if new_role not in {Role.PLATFORM_ADMIN,Role.PUBLIC_VERIFIER} and new_institution_id is None: raise ValueError("This role requires institution")
+chaincert/auth/service.py:216:  if actor.role!=Role.PLATFORM_ADMIN: raise AccessDenied("Only PLATFORM_ADMIN can read full audit log")
+chaincert/auth/models.py:4: PLATFORM_ADMIN="PLATFORM_ADMIN"
+chaincert/auth/models.py:5: INSTITUTION_ADMIN="INSTITUTION_ADMIN"
+chaincert/auth/policy.py:3: Role.PLATFORM_ADMIN:set(Permission),
+chaincert/auth/policy.py:4: Role.INSTITUTION_ADMIN:{Permission.PUBLIC_VERIFY,Permission.ISSUE_CERTIFICATE,Permission.CORRECT_CERTIFICATE,
+chaincert/auth/passwords.py:7:def verify_password(password:str, encoded_hash:str)->bool:
+chaincert/api/routes.py:104:@api_bp.post("/auth/login")
+chaincert/api/routes.py:105:def login():
+chaincert/api/routes.py:146:    if user.role != Role.PLATFORM_ADMIN:
+chaincert/api/routes.py:167:    if user.role != Role.PLATFORM_ADMIN:
+chaincert/api/routes.py:184:    if user.role != Role.PLATFORM_ADMIN:
+chaincert/api/routes.py:316:    institution = None if user.role == Role.PLATFORM_ADMIN else user.institution_id
+chaincert/api/routes.py:331:    if user.role != Role.PLATFORM_ADMIN:
+chaincert/api/routes.py:355:    institution = None if user.role == Role.PLATFORM_ADMIN else user.institution_id
+
+========== FRONTEND MOCK DATA ==========
+frontend/src/pages/auth/StudentLoginPage.tsx:6:  const [identifier, setIdentifier] = useState('ananya.patil@alumni.westminster.edu');
+frontend/src/pages/auth/StudentLoginPage.tsx:7:  const [password, setPassword] = useState('student123');
+frontend/src/pages/auth/StudentLoginPage.tsx:95:                  placeholder="ananya.patil@alumni.westminster.edu"
+frontend/src/pages/auth/StudentLoginPage.tsx:135:              <span>Demo Student: <strong>Ananya Patil</strong></span>
+frontend/src/pages/auth/StudentLoginPage.tsx:139:                  setIdentifier('ananya.patil@alumni.westminster.edu');
+frontend/src/pages/auth/StudentLoginPage.tsx:140:                  setPassword('student123');
+frontend/src/services/mockData.ts:16:  email: 'ananya.patil@alumni.westminster.edu',
+frontend/src/services/mockData.ts:28:    studentEmail: 'ananya.patil@alumni.westminster.edu',
+frontend/src/services/mockData.ts:54:    studentEmail: 'ananya.patil@alumni.westminster.edu',
+
+========== FRONTEND BUILD ==========
+
+> chaincert_frontend@0.0.0 build
+> tsc -b && vite build
+
+sh: 1: tsc: Permission denied
+FRONTEND_BUILD_EXIT=126
+
+========== PYTHON TEST DISCOVERY ==========
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/usr/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/home/ameya/ChainCert_Demo/EDIL1/.venv/lib/python3.10/site-packages/pytest/__main__.py", line 9, in <module>
+    raise SystemExit(pytest.console_main())
+  File "/home/ameya/ChainCert_Demo/EDIL1/.venv/lib/python3.10/site-packages/_pytest/config/__init__.py", line 201, in console_main
+    code = main()
+  File "/home/ameya/ChainCert_Demo/EDIL1/.venv/lib/python3.10/site-packages/_pytest/config/__init__.py", line 156, in main
+    config = _prepareconfig(args, plugins)
+  File "/home/ameya/ChainCert_Demo/EDIL1/.venv/lib/python3.10/site-packages/_pytest/config/__init__.py", line 342, in _prepareconfig
+    config = pluginmanager.hook.pytest_cmdline_parse(
+  File "/home/ameya/ChainCert_Demo/EDIL1/.venv/lib/python3.10/site-packages/pluggy/_caller.py", line 197, in __call__
+    return self._hookexec(
+  File "/home/ameya/ChainCert_Demo/EDIL1/.venv/lib/python3.10/site-packages/pluggy/_manager.py", line 183, in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+  File "/home/ameya/ChainCert_Demo/EDIL1/.venv/lib/python3.10/site-packages/pluggy/_execution.py", line 195, in _multicall
+    raise exception
+  File "/home/ameya/ChainCert_Demo/EDIL1/.venv/lib/python3.10/site-packages/pluggy/_execution.py", line 167, in _multicall
+    teardown.throw(exception)
+  File "/home/ameya/ChainCert_Demo/EDIL1/.venv/lib/python3.10/site-packages/_pytest/helpconfig.py", line 112, in pytest_cmdline_parse
+    config = yield
+  File "/home/ameya/ChainCert_Demo/EDIL1/.venv/lib/python3.10/site-packages/pluggy/_execution.py", line 147, in _multicall
+    res = hook_impl.function(*args)
+  File "/home/ameya/ChainCert_Demo/EDIL1/.venv/lib/python3.10/site-packages/_pytest/config/__init__.py", line 1146, in pytest_cmdline_parse
+    self.parse(args)
+  File "/home/ameya/ChainCert_Demo/EDIL1/.venv/lib/python3.10/site-packages/_pytest/config/__init__.py", line 1527, in parse
+    self._preparse(args, addopts=addopts)
+  File "/home/ameya/ChainCert_Demo/EDIL1/.venv/lib/python3.10/site-packages/_pytest/config/__init__.py", line 1412, in _preparse
+    self.pluginmanager.load_setuptools_entrypoints("pytest11")
+  File "/home/ameya/ChainCert_Demo/EDIL1/.venv/lib/python3.10/site-packages/pluggy/_manager.py", line 521, in load_setuptools_entrypoints
+    plugin = ep.load()
+  File "/usr/lib/python3.10/importlib/metadata/__init__.py", line 171, in load
+    module = import_module(match.group('module'))
+  File "/usr/lib/python3.10/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 992, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 992, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1006, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 688, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 883, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/opt/ros/humble/lib/python3.10/site-packages/launch_testing/__init__.py", line 15, in <module>
+    from . import tools
+  File "/opt/ros/humble/lib/python3.10/site-packages/launch_testing/tools/__init__.py", line 18, in <module>
+    from .process import launch_process
+  File "/opt/ros/humble/lib/python3.10/site-packages/launch_testing/tools/process.py", line 17, in <module>
+    import launch
+  File "/opt/ros/humble/lib/python3.10/site-packages/launch/__init__.py", line 17, in <module>
+    from . import actions
+  File "/opt/ros/humble/lib/python3.10/site-packages/launch/actions/__init__.py", line 17, in <module>
+    from .declare_launch_argument import DeclareLaunchArgument
+  File "/opt/ros/humble/lib/python3.10/site-packages/launch/actions/declare_launch_argument.py", line 22, in <module>
+    import launch.logging
+  File "/opt/ros/humble/lib/python3.10/site-packages/launch/logging/__init__.py", line 32, in <module>
+    from ..frontend import expose_substitution
+  File "/opt/ros/humble/lib/python3.10/site-packages/launch/frontend/__init__.py", line 17, in <module>
+    from . import type_utils
+  File "/opt/ros/humble/lib/python3.10/site-packages/launch/frontend/type_utils.py", line 22, in <module>
+    from .entity import Entity
+  File "/opt/ros/humble/lib/python3.10/site-packages/launch/frontend/entity.py", line 22, in <module>
+    from launch.utilities.type_utils import AllowedTypesType
+  File "/opt/ros/humble/lib/python3.10/site-packages/launch/utilities/type_utils.py", line 29, in <module>
+    import yaml
+ModuleNotFoundError: No module named 'yaml'
+PYTEST_DISCOVERY_EXIT=1
+
+========== DATABASE AND CHAIN INTEGRITY ==========
+CHAIN_VALID: True
+CHAIN_ERRORS: []
+
+CERTIFICATES
+{"id": 1, "certificate_id": "CC001", "student_name": "Rahul Sharma", "roll_number": "A101", "course": "AI & DS", "cgpa": "9.2", "issue_date": "2026-08-20", "institution_id": "MMCOE", "status": "BATCHED", "canonical_data": "certificate_id=CC001|student_name=Rahul Sharma|roll_number=A101|course=AI & DS|cgpa=9.20|issue_date=2026-08-20|institution_id=MMCOE", "certificate_hash": "4d05c0c9b8a5bc497bdf5fecd1fa1d12a7395ea11c3270a2f0fbddd86216d65d", "batch_id": "DEMO_SEM1_2026", "merkle_root": "695175e7aa03a1b3e23a79a5f6d17908674ddc86a47ea3faf38119e09dc73eee", "merkle_proof": [{"hash": "35e5331ca1231e41083b84552b1b2b87bc37ad6ce05b9ab8fe4fee6f56043179", "position": "right"}, {"hash": "cb36153d1ea3244c9f042e7cb44bef8f20fb2a69ca0291bdb40b1f618f2464ff", "position": "right"}], "created_at": "2026-09-22T04:50:49.785854Z", "updated_at": "2026-10-20T18:38:44.594940Z", "revocation_reason": null, "revoked_at": null, "revoked_by": null}
+{"id": 2, "certificate_id": "CC005", "student_name": "Rohan Deshmukh", "roll_number": "A105", "course": "AI & DS", "cgpa": "8.7", "issue_date": "2026-08-20", "institution_id": "MMCOE", "status": "CHAINED", "canonical_data": "certificate_id=CC005|student_name=Rohan Deshmukh|roll_number=A105|course=AI & DS|cgpa=8.70|issue_date=2026-08-20|institution_id=MMCOE", "certificate_hash": "6969b1c5f47a1e91c32bd521b19403f4a317a1c08d14f26662b79908a2ec8737", "batch_id": "SEM1_2026", "merkle_root": "eb0de87c281007c7542020f7fd81dbbf1337847019235a988dd7e50c4b4c7783", "merkle_proof": [{"hash": "4d05c0c9b8a5bc497bdf5fecd1fa1d12a7395ea11c3270a2f0fbddd86216d65d", "position": "left"}, {"hash": "b26c5bf993c414f8c7f6337f09e2c447c4dc2ce645a5385247de5703979da1ba", "position": "right"}], "created_at": "2026-09-22T04:51:27.455346Z", "updated_at": "2026-10-20T17:54:03.686493Z", "revocation_reason": null, "revoked_at": null, "revoked_by": null}
+{"id": 3, "certificate_id": "CC002", "student_name": "Priya Patel", "roll_number": "A102", "course": "AI & DS", "cgpa": "8.85", "issue_date": "2026-08-20", "institution_id": "MMCOE", "status": "BATCHED", "canonical_data": "certificate_id=CC002|student_name=Priya Patel|roll_number=A102|course=AI & DS|cgpa=8.85|issue_date=2026-08-20|institution_id=MMCOE", "certificate_hash": "35e5331ca1231e41083b84552b1b2b87bc37ad6ce05b9ab8fe4fee6f56043179", "batch_id": "DEMO_SEM1_2026", "merkle_root": "695175e7aa03a1b3e23a79a5f6d17908674ddc86a47ea3faf38119e09dc73eee", "merkle_proof": [{"hash": "4d05c0c9b8a5bc497bdf5fecd1fa1d12a7395ea11c3270a2f0fbddd86216d65d", "position": "left"}, {"hash": "cb36153d1ea3244c9f042e7cb44bef8f20fb2a69ca0291bdb40b1f618f2464ff", "position": "right"}], "created_at": "2026-09-22T04:54:39.909435Z", "updated_at": "2026-10-20T18:38:44.594940Z", "revocation_reason": null, "revoked_at": null, "revoked_by": null}
+{"id": 4, "certificate_id": "CC003", "student_name": "Amit Verma", "roll_number": "A103", "course": "AI & DS", "cgpa": "9.5", "issue_date": "2026-08-20", "institution_id": "MMCOE", "status": "BATCHED", "canonical_data": "certificate_id=CC003|student_name=Amit Verma|roll_number=A103|course=AI & DS|cgpa=9.50|issue_date=2026-08-20|institution_id=MMCOE", "certificate_hash": "b41fbae686bd1812c8e09c3e72ceb5ccbfcd9a551029467abf1943f688dbaa5f", "batch_id": "DEMO_SEM1_2026", "merkle_root": "695175e7aa03a1b3e23a79a5f6d17908674ddc86a47ea3faf38119e09dc73eee", "merkle_proof": [{"hash": "3967a18cb2f3eddcc8b39d053d0a0e7f9ad763c4dcab6bdb31e358fc7f59f7c4", "position": "right"}, {"hash": "fd16ef619bed1b294623f2e796a12bc6de58851c4e543a1f31f67b4f25318413", "position": "left"}], "created_at": "2026-09-22T04:54:39.940080Z", "updated_at": "2026-10-20T18:38:44.594940Z", "revocation_reason": null, "revoked_at": null, "revoked_by": null}
+{"id": 5, "certificate_id": "CC004", "student_name": "Sneha Kulkarni", "roll_number": "A104", "course": "AI & DS", "cgpa": "9.1", "issue_date": "2026-08-20", "institution_id": "MMCOE", "status": "BATCHED", "canonical_data": "certificate_id=CC004|student_name=Sneha Kulkarni|roll_number=A104|course=AI & DS|cgpa=9.10|issue_date=2026-08-20|institution_id=MMCOE", "certificate_hash": "3967a18cb2f3eddcc8b39d053d0a0e7f9ad763c4dcab6bdb31e358fc7f59f7c4", "batch_id": "DEMO_SEM1_2026", "merkle_root": "695175e7aa03a1b3e23a79a5f6d17908674ddc86a47ea3faf38119e09dc73eee", "merkle_proof": [{"hash": "b41fbae686bd1812c8e09c3e72ceb5ccbfcd9a551029467abf1943f688dbaa5f", "position": "left"}, {"hash": "fd16ef619bed1b294623f2e796a12bc6de58851c4e543a1f31f67b4f25318413", "position": "left"}], "created_at": "2026-09-22T04:54:39.966681Z", "updated_at": "2026-10-20T18:38:44.594940Z", "revocation_reason": null, "revoked_at": null, "revoked_by": null}
+{"id": 6, "certificate_id": "CC006", "student_name": "Ameya Walvekar", "roll_number": "A108", "course": "AI & DS", "cgpa": "9.75", "issue_date": "2026-08-20", "institution_id": "MMCOE", "status": "REGISTERED", "canonical_data": "certificate_id=CC006|student_name=Ameya Walvekar|roll_number=A108|course=AI & DS|cgpa=9.75|issue_date=2026-08-20|institution_id=MMCOE", "certificate_hash": "7f9a13d391245cfa30dd1b5025a1e70a24ba38f0c167f8da4757603ef519f5eb", "batch_id": null, "merkle_root": null, "merkle_proof": null, "created_at": "2026-09-22T06:07:33.545946Z", "updated_at": "2026-09-22T06:07:33.545946Z", "revocation_reason": null, "revoked_at": null, "revoked_by": null}
+{"id": 7, "certificate_id": "CERT-A1", "student_name": "Demo Student", "roll_number": "R-101", "course": "Data Science", "cgpa": "8.75", "issue_date": "2026-08-20", "institution_id": "MMCOE", "status": "BATCHED", "canonical_data": "certificate_id=CERT-A1|student_name=Demo Student|roll_number=R-101|course=Data Science|cgpa=8.75|issue_date=2026-08-20|institution_id=MMCOE", "certificate_hash": "a8dce12eb7e44a54584583ed33a640fbdebd9dff853b2fabd78858c3c6cff034", "batch_id": "DEMO_OCR_2026", "merkle_root": "a8dce12eb7e44a54584583ed33a640fbdebd9dff853b2fabd78858c3c6cff034", "merkle_proof": [], "created_at": "2026-10-20T17:39:38.457096Z", "updated_at": "2026-10-20T18:38:44.604355Z", "revocation_reason": null, "revoked_at": null, "revoked_by": null}
+
+BATCHES
+{"batch_id": "SEM1_2026", "certificate_count": 4, "merkle_root": "eb0de87c281007c7542020f7fd81dbbf1337847019235a988dd7e50c4b4c7783", "block_id": 1, "created_at": "2026-10-20T17:54:03.686493Z"}
+{"batch_id": "DEMO_SEM1_2026", "certificate_count": 4, "merkle_root": "695175e7aa03a1b3e23a79a5f6d17908674ddc86a47ea3faf38119e09dc73eee", "block_id": null, "created_at": "2026-10-20T18:38:44.594940Z"}
+{"batch_id": "DEMO_OCR_2026", "certificate_count": 1, "merkle_root": "a8dce12eb7e44a54584583ed33a640fbdebd9dff853b2fabd78858c3c6cff034", "block_id": null, "created_at": "2026-10-20T18:38:44.604355Z"}
+
+AUTH USERS (NO PASSWORD HASHES)
+{'id': 1, 'email': 'demo.admin@chaincert.local', 'display_name': 'ChainCert Demo Admin', 'role': 'PLATFORM_ADMIN', 'institution_id': None, 'active': 1}
+{'id': 2, 'email': 'issuer@chaincert.local', 'display_name': 'Demo Issuer', 'role': 'INSTITUTION_ADMIN', 'institution_id': 1, 'active': 1}
