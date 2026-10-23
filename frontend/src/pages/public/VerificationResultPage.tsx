@@ -1,18 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { useSearchParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { verificationService } from '../../services/verificationService';
 import { VerificationResult, VerificationState } from '../../types';
 import { VerificationBadge } from '../../components/common/VerificationBadge';
 
 export const VerificationResultPage: React.FC = () => {
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const navigate = useNavigate();
 
   const idParam = searchParams.get('id') || 'CC-2024-89042-ENG';
   const channelParam = (searchParams.get('channel') as any) || 'ID_LOOKUP';
 
-  const [result, setResult] = useState<VerificationResult | null>(null);
-  const [loading, setLoading] = useState(true);
+  const initialResult = location.state?.verificationResult as VerificationResult | undefined;
+
+  const [result, setResult] = useState<VerificationResult | null>(initialResult || null);
+  const [loading, setLoading] = useState(!initialResult);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -30,8 +33,35 @@ export const VerificationResultPage: React.FC = () => {
     }
   };
 
+  const handleSimulateTamper = async () => {
+    const cred = result?.credential;
+    const cid = cred?.id || idParam;
+    setLoading(true);
+    try {
+      const tamperedFields = {
+        certificate_id: cid,
+        student_name: cred?.studentName || 'Alice Example',
+        roll_number: cred?.studentRoll || 'DEMO-ROLL-001',
+        course: cred?.course || 'Bachelor of Technology in Artificial Intelligence',
+        cgpa: '9.99', // Altered CGPA
+        issue_date: cred?.issueDate || '2026-10-23',
+        institution_id: cred?.institutionId || cred?.institution || 'MMCOE',
+      };
+      const res = await verificationService.verifyWithFields(tamperedFields, 'ID_LOOKUP');
+      setResult(res);
+      showToast('Backend integrity check evaluated modified credential data (CGPA changed to 9.99).');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    loadVerification(idParam);
+    if (initialResult && initialResult.certificateId === idParam) {
+      setResult(initialResult);
+      setLoading(false);
+    } else {
+      loadVerification(idParam);
+    }
   }, [idParam, channelParam]);
 
   const copyShareLink = () => {
@@ -74,44 +104,36 @@ export const VerificationResultPage: React.FC = () => {
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           <button
-            onClick={() => loadVerification('CC-2024-89042-ENG')}
+            onClick={() => loadVerification(result?.certificateId && result.certificateId !== 'UNKNOWN-123' ? result.certificateId : 'DEMO-CC-2026-001')}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
               result.state === 'GENUINE' ? 'bg-emerald-600 text-white shadow-xs' : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
             }`}
           >
-            1. GENUINE
+            1. GENUINE (Original)
           </button>
           <button
-            onClick={() => loadVerification('CC-TAMPERED-SAMPLE')}
+            onClick={handleSimulateTamper}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
               result.state === 'TAMPERED' ? 'bg-rose-600 text-white shadow-xs' : 'text-rose-700 bg-rose-50 hover:bg-rose-100'
             }`}
           >
-            2. TAMPERED
+            2. TAMPERED (Modify CGPA)
           </button>
           <button
-            onClick={() => loadVerification('CC-2024-55120-MED')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-              result.state === 'REVIEW_REQUIRED' ? 'bg-amber-600 text-white shadow-xs' : 'text-amber-800 bg-amber-50 hover:bg-amber-100'
-            }`}
-          >
-            3. REVIEW_REQUIRED
-          </button>
-          <button
-            onClick={() => loadVerification('CC-UNKNOWN-RECORD')}
+            onClick={() => loadVerification('UNKNOWN-123')}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
               result.state === 'NOT_FOUND' ? 'bg-slate-700 text-white shadow-xs' : 'text-slate-700 bg-slate-100 hover:bg-slate-200'
             }`}
           >
-            4. NOT_FOUND
+            3. NOT_FOUND (UNKNOWN-123)
           </button>
           <button
-            onClick={() => loadVerification('CC-2024-99211-LAW')}
+            onClick={() => loadVerification('DEMO-CC-2026-001')}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
               result.state === 'REVOKED' ? 'bg-rose-700 text-white shadow-xs' : 'text-rose-700 bg-rose-50 hover:bg-rose-100'
             }`}
           >
-            5. REVOKED
+            4. REVOKED Status
           </button>
         </div>
       </div>
@@ -175,54 +197,110 @@ export const VerificationResultPage: React.FC = () => {
       </div>
 
       {/* State-Specific Warning / Notice Banner */}
-      {result.state === 'NOT_FOUND' && (
-        <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-800 space-y-2">
-          <div className="flex items-center gap-2 font-bold text-slate-900">
-            <span className="material-symbols-outlined text-slate-600 text-[20px]">info</span>
-            <span>Important Note Concerning Unfound Records</span>
+      {result.state === 'GENUINE' && (
+        <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-2">
+          <div className="flex items-center gap-2 font-bold text-emerald-950 text-sm">
+            <span className="material-symbols-outlined text-emerald-600 text-[20px]">verified</span>
+            <span>GENUINE — Certificate Verified Successfully</span>
           </div>
           <p className="leading-relaxed">
-            {result.detailedMessage}
+            All required fields matched the trusted institutional registry, and cryptographic verification (SHA-256 canonical hash & Merkle anchor) passed.
+          </p>
+        </div>
+      )}
+
+      {result.state === 'NOT_FOUND' && (
+        <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-800 space-y-2">
+          <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
+            <span className="material-symbols-outlined text-slate-600 text-[20px]">search_off</span>
+            <span>NOT FOUND — No Trusted Certificate Exists</span>
+          </div>
+          <p className="leading-relaxed">
+            No trusted certificate record was found for Certificate ID: <strong className="font-mono">{result.certificateId}</strong>.
           </p>
           <p className="text-slate-600 text-[11px]">
-            Tip: Please double-check the Certificate ID against your official degree document or ask the conferring institution to verify that the diploma has been published to the digital registry.
+            Tip: Please double-check the Certificate ID or verify that the document has been published to the registry.
           </p>
         </div>
       )}
 
       {result.state === 'REVOKED' && (
         <div className="p-5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-900 space-y-2">
-          <div className="flex items-center gap-2 font-bold text-rose-950">
+          <div className="flex items-center gap-2 font-bold text-rose-950 text-sm">
             <span className="material-symbols-outlined text-rose-600 text-[20px]">gavel</span>
-            <span>Official University Revocation Notice</span>
+            <span>REVOKED — This Certificate Was Revoked</span>
           </div>
           <p className="leading-relaxed">
             {result.detailedMessage}
           </p>
+          {result.credential?.revocationReason && (
+            <div className="p-2.5 bg-white/80 rounded-xl border border-rose-200 text-rose-900">
+              <strong>Reason:</strong> {result.credential.revocationReason}
+            </div>
+          )}
         </div>
       )}
 
       {result.state === 'REVIEW_REQUIRED' && (
         <div className="p-5 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-2">
-          <div className="flex items-center gap-2 font-bold text-amber-950">
+          <div className="flex items-center gap-2 font-bold text-amber-950 text-sm">
             <span className="material-symbols-outlined text-amber-600 text-[20px]">help</span>
-            <span>Secondary Human or Registrar Review Required</span>
+            <span>REVIEW REQUIRED — Document Could Not Be Reliably Extracted</span>
           </div>
           <p className="leading-relaxed">
             {result.detailedMessage}
           </p>
+          {result.missingFields && result.missingFields.length > 0 && (
+            <div className="p-2.5 bg-white/80 rounded-xl border border-amber-200 text-amber-900">
+              <strong>Unresolved Fields:</strong> {result.missingFields.map(f => f.replace(/_/g, ' ')).join(', ')}
+            </div>
+          )}
         </div>
       )}
 
       {result.state === 'TAMPERED' && (
-        <div className="p-5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-900 space-y-2">
-          <div className="flex items-center gap-2 font-bold text-rose-950">
-            <span className="material-symbols-outlined text-rose-600 text-[20px]">warning</span>
-            <span>Cryptographic Integrity Alert</span>
+        <div className="p-5 rounded-2xl bg-rose-50 border border-rose-300 text-xs text-rose-900 space-y-3 shadow-xs">
+          <div className="flex items-center gap-2 font-bold text-rose-950 text-sm">
+            <span className="material-symbols-outlined text-rose-600 text-[22px]">warning</span>
+            <span>TAMPERED — Certificate Data Does Not Match Trusted Registry</span>
           </div>
           <p className="leading-relaxed">
             {result.detailedMessage}
           </p>
+
+          {/* Mismatched Fields Comparison Card */}
+          {result.mismatches && Object.keys(result.mismatches).length > 0 ? (
+            <div className="bg-white rounded-xl p-4 border border-rose-200 space-y-2.5">
+              <span className="font-bold text-rose-950 block text-xs uppercase tracking-wider">
+                Confirmed Mismatched Fields:
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {Object.entries(result.mismatches).map(([field, diff]) => (
+                  <div key={field} className="p-3 bg-rose-50/70 rounded-xl border border-rose-200 text-xs space-y-1">
+                    <span className="font-bold text-rose-900 uppercase tracking-wider text-[11px] block">
+                      Field: {field.replace(/_/g, ' ')}
+                    </span>
+                    <div className="flex justify-between items-center text-slate-700 pt-0.5">
+                      <span className="text-[11px] text-slate-500">Expected (Registry):</span>
+                      <span className="font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        {diff.expected}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-slate-700">
+                      <span className="text-[11px] text-slate-500">Uploaded (Document):</span>
+                      <span className="font-mono font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded border border-rose-300">
+                        {diff.actual}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : result.mismatchedFields && result.mismatchedFields.length > 0 ? (
+            <div className="bg-white rounded-xl p-3 border border-rose-200 text-rose-900">
+              <strong>Mismatched Fields:</strong> {result.mismatchedFields.map(f => f.replace(/_/g, ' ')).join(', ')}
+            </div>
+          ) : null}
         </div>
       )}
 

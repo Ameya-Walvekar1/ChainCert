@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block title %}Module 1 — Certificate & Record Management{% endblock %}
+
+{% block content %}
+<!-- PIPELINE STEP INDICATOR BAR -->
+<div style="background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem 1.5rem; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+    <div style="font-weight: 700; color: var(--primary-cyan); font-size: 0.9rem; text-transform: uppercase;">Pipeline Tracker:</div>
+    <div style="display: flex; gap: 0.75rem; font-size: 0.85rem; flex-wrap: wrap; align-items: center;">
+        <span style="background: var(--primary-cyan); color: #0f172a; font-weight: 700; padding: 0.3rem 0.7rem; border-radius: 20px;">1. Form Entry (Active)</span>
+        <span style="color: var(--text-muted);">➔</span>
+        <span style="color: var(--text-muted);">2. SHA-256 Hasher</span>
+        <span style="color: var(--text-muted);">➔</span>
+        <span style="color: var(--text-muted);">3. Merkle Tree</span>
+        <span style="color: var(--text-muted);">➔</span>
+        <span style="color: var(--text-muted);">4. Block Chaining</span>
+    </div>
+</div>
+
+<div class="page-title-section">
+    <h1 class="page-title">MODULE 1: Certificate & Record Management</h1>
+    <p class="page-subtitle">Form-Based Academic Credential Entry & SQLite Record Management</p>
+</div>
+
+{% if message %}
+    <div class="alert alert-{{ msg_type }}">
+        <span>{{ message }}</span>
+    </div>
+{% endif %}
+
+<div style="display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 2rem; margin-bottom: 2.5rem;">
+    <!-- LEFT: Structured Form Entry -->
+    <div style="background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+            <h3 style="color: #ffffff;">Register Certificate Details</h3>
+            <span style="font-size: 0.75rem; color: var(--primary-cyan); font-weight: 600;">Interactive Form</span>
+        </div>
+
+        <form action="{{ url_for('module1_register') }}" method="POST">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label>Certificate ID</label>
+                    <input type="text" name="certificate_id" class="form-control" value="{{ form_data.certificate_id if form_data else 'CC001' }}" placeholder="e.g. CC001" required>
+                </div>
+                <div class="form-group">
+                    <label>Student Name</label>
+                    <input type="text" name="student_name" class="form-control" value="{{ form_data.student_name if form_data else 'Rahul Sharma' }}" placeholder="e.g. Rahul Sharma" required>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label>Roll Number</label>
+                    <input type="text" name="roll_number" class="form-control" value="{{ form_data.roll_number if form_data else 'A101' }}" placeholder="e.g. A101" required>
+                </div>
+                <div class="form-group">
+                    <label>Course / Branch</label>
+                    <input type="text" name="course" class="form-control" value="{{ form_data.course if form_data else 'AI & DS' }}" placeholder="e.g. AI & DS" required>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label>CGPA (0.00 – 10.00)</label>
+                    <input type="text" name="cgpa" class="form-control" value="{{ form_data.cgpa if form_data else '9.20' }}" placeholder="e.g. 9.20" required>
+                </div>
+                <div class="form-group">
+                    <label>Issue Date (YYYY-MM-DD)</label>
+                    <input type="text" name="issue_date" class="form-control" value="{{ form_data.issue_date if form_data else '2026-08-20' }}" placeholder="YYYY-MM-DD" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Institution ID</label>
+                <input type="text" name="institution_id" class="form-control" value="{{ form_data.institution_id if form_data else 'MMCOE' }}" placeholder="e.g. MMCOE" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; font-size: 0.95rem; margin-top: 0.5rem;">
+                ⚡ REGISTER CERTIFICATE
+            </button>
+        </form>
+
+        <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600;">Auto-Fill Sample Data:</p>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <a href="{{ url_for('module1_load_sample', sample_id=1) }}" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.35rem 0.7rem;">Sample CC001 (Rahul)</a>
+                <a href="{{ url_for('module1_load_sample', sample_id=2) }}" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.35rem 0.7rem;">Sample CC002 (Priya)</a>
+                <a href="{{ url_for('module1_load_sample', sample_id=3) }}" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.35rem 0.7rem;">Sample CC003 (Amit)</a>
+                <a href="{{ url_for('module1_load_sample', sample_id=4) }}" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.35rem 0.7rem;">Sample CC004 (Sneha)</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT: Registered Certificate Details -->
+    <div style="background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+            <h3 style="margin-bottom: 1rem; color: #ffffff;">Registration Inspection</h3>
+
+            {% if registered_cert %}
+                <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 1rem; margin-bottom: 1.25rem;">
+                    <div style="color: var(--accent-green); font-weight: 600; font-size: 0.9rem; margin-bottom: 0.4rem;">✓ Certificate Registered in SQLite Database</div>
+                    <div style="font-size: 0.85rem; color: var(--text-muted);">
+                        <strong>Status:</strong> <span class="card-badge badge-working" style="margin: 0; padding: 0.1rem 0.4rem;">{{ registered_cert.status }}</span>
+                    </div>
+                </div>
+
+                <table style="margin-bottom: 1.25rem;">
+                    <tr><th style="width: 38%;">Field</th><th>Stored Value</th></tr>
+                    <tr><td>Certificate ID</td><td><strong style="color: #a5f3fc;">{{ registered_cert.certificate_id }}</strong></td></tr>
+                    <tr><td>Student Name</td><td>{{ registered_cert.student_name }}</td></tr>
+                    <tr><td>Roll Number</td><td>{{ registered_cert.roll_number }}</td></tr>
+                    <tr><td>Course</td><td>{{ registered_cert.course }}</td></tr>
+                    <tr><td>CGPA</td><td>{{ registered_cert.cgpa }}</td></tr>
+                    <tr><td>Issue Date</td><td>{{ registered_cert.issue_date }}</td></tr>
+                    <tr><td>Institution ID</td><td>{{ registered_cert.institution_id }}</td></tr>
+                </table>
+
+                <label style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 0.3rem;">SHA-256 HASH (MODULE 2):</label>
+                <div class="code-box" style="margin-bottom: 1rem; font-size: 0.8rem;">{{ registered_cert.certificate_hash }}</div>
+
+                <label style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 0.3rem;">CANONICAL DATA (MODULE 2):</label>
+                <div class="code-box" style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 1.5rem;">{{ registered_cert.canonical_data }}</div>
+            {% else %}
+                <div style="padding: 4rem 1rem; text-align: center; color: var(--text-muted);">
+                    <p style="font-size: 1rem; font-weight: 500;">No certificate registered yet in this session.</p>
+                    <p style="font-size: 0.85rem; margin-top: 0.5rem;">Fill out the form on the left or click an Auto-Fill sample button.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        {% if registered_cert %}
+            <div style="background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: 8px; padding: 1rem; text-align: center;">
+                <div style="font-size: 0.85rem; color: #ffffff; margin-bottom: 0.5rem;">
+                    Ready for Next Pipeline Step:
+                </div>
+                <a href="{{ url_for('module2', cert_id=registered_cert.certificate_id) }}" class="btn btn-primary" style="width: 100%;">
+                    ➡️ Proceed to Module 2: View SHA-256 Hasher →
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<h2 style="font-size: 1.3rem; margin-bottom: 1rem; color: #ffffff;">Registered Certificates Database Table (SQLite)</h2>
+
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Cert ID</th>
+                <th>Student Name</th>
+                <th>Roll No</th>
+                <th>Course</th>
+                <th>CGPA</th>
+                <th>Issue Date</th>
+                <th>Status</th>
+                <th>Module 2 SHA-256 Hash</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in certificates %}
+                <tr>
+                    <td><strong style="color: #a5f3fc;">{{ c.certificate_id }}</strong></td>
+                    <td>{{ c.student_name }}</td>
+                    <td>{{ c.roll_number }}</td>
+                    <td>{{ c.course }}</td>
+                    <td>{{ c.cgpa }}</td>
+                    <td>{{ c.issue_date }}</td>
+                    <td><span class="card-badge badge-working" style="margin:0; font-size:0.65rem;">{{ c.status }}</span></td>
+                    <td><span class="hash-highlight" style="font-family: monospace; font-size: 0.8rem;">{{ c.certificate_hash[:16] }}...</span></td>
+                    <td>
+                        <a href="{{ url_for('module2', cert_id=c.certificate_id) }}" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">Inspect M2 Hash →</a>
+                    </td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 2rem;">No certificate records found in database.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

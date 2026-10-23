@@ -1,3 +1,4 @@
+import { getPublicOrigin } from '../../services/publicOrigin';
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { credentialService } from '../../services/credentialService';
@@ -13,6 +14,7 @@ export const StudentCredentialDetailsPage: React.FC = () => {
   const [recipientEmail, setRecipientEmail] = useState('');
   const [emailSent, setEmailSent] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -23,6 +25,9 @@ export const StudentCredentialDetailsPage: React.FC = () => {
     if (!id) return;
     credentialService.getById(id).then((res) => {
       setCredential(res);
+      setLoading(false);
+    }).catch(() => {
+      setCredential(null);
       setLoading(false);
     });
   }, [id]);
@@ -52,7 +57,7 @@ export const StudentCredentialDetailsPage: React.FC = () => {
     );
   }
 
-  const publicVerificationUrl = `${window.location.origin}/verify?id=${encodeURIComponent(credential.id)}`;
+  const publicVerificationUrl = `${getPublicOrigin()}/verify/result?channel=QR_SCAN&id=${encodeURIComponent(credential.id)}`;
 
   const copyPublicUrl = () => {
     navigator.clipboard.writeText(publicVerificationUrl);
@@ -62,6 +67,300 @@ export const StudentCredentialDetailsPage: React.FC = () => {
   const copyCertId = () => {
     navigator.clipboard.writeText(credential.id);
     showToast(`Credential ID ${credential.id} copied!`);
+  };
+
+  const downloadAsPDF = () => {
+    if (!credential) return;
+    setPdfLoading(true);
+
+    const qrUrl = credential.qrCodeUrl ||
+      `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(publicVerificationUrl)}`;
+
+    // Raw YYYY-MM-DD used in the machine-readable field so the extractor
+    // normalises it to exactly what is stored in the DB.
+    const rawIssueDate = credential.issueDate ?? '';
+    // Add T00:00:00 to prevent timezone shift turning e.g. 2026-10-23 → Oct 22
+    const issueDateFormatted = credential.issueDate
+      ? new Date(credential.issueDate + 'T00:00:00').toLocaleDateString('en-US', {
+          year: 'numeric', month: 'long', day: 'numeric',
+        })
+      : credential.issueDate;
+
+    const statusColor =
+      credential.status === 'ACTIVE' || credential.status === 'CONFERRED'
+        ? '#059669'
+        : credential.status === 'REVOKED'
+        ? '#dc2626'
+        : '#d97706';
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Certificate – ${credential.id}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 210mm; background: #fff; font-family: 'Inter', sans-serif; color: #0f172a; }
+    @page { size: A4; margin: 0; }
+    @media print {
+      html, body { width: 210mm; }
+      .no-print { display: none !important; }
+    }
+
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      padding: 14mm 16mm 12mm;
+      display: flex;
+      flex-direction: column;
+      gap: 10mm;
+      position: relative;
+      background: #fff;
+    }
+
+    /* decorative border */
+    .page::before {
+      content: '';
+      position: absolute;
+      inset: 5mm;
+      border: 2px solid #c7d2fe;
+      border-radius: 6mm;
+      pointer-events: none;
+    }
+    .page::after {
+      content: '';
+      position: absolute;
+      inset: 6.5mm;
+      border: 0.5px solid #e0e7ff;
+      border-radius: 5mm;
+      pointer-events: none;
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid #e0e7ff;
+      padding-bottom: 6mm;
+    }
+    .header-left { display: flex; align-items: center; gap: 4mm; }
+    .seal {
+      width: 18mm; height: 18mm;
+      background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 9mm; font-weight: 800;
+      flex-shrink: 0;
+      box-shadow: 0 2px 6px rgba(37,99,235,0.4);
+    }
+    .inst-name { font-size: 4.8mm; font-weight: 800; color: #1e3a5f; }
+    .inst-sub  { font-size: 2.8mm; color: #64748b; margin-top: 0.5mm; }
+    .badge {
+      font-size: 2.5mm; font-weight: 600;
+      background: #f0fdf4; color: #166534;
+      border: 1px solid #bbf7d0;
+      border-radius: 3mm;
+      padding: 1.2mm 3mm;
+    }
+
+    /* ── Title ── */
+    .cert-label {
+      text-align: center;
+      font-size: 3mm; font-weight: 700;
+      letter-spacing: 0.4mm;
+      text-transform: uppercase;
+      color: #6366f1;
+    }
+    .cert-title {
+      text-align: center;
+      font-size: 8mm; font-weight: 800;
+      color: #1e3a5f;
+      line-height: 1.15;
+      margin-top: 2mm;
+    }
+    .cert-subtitle {
+      text-align: center;
+      font-size: 3.5mm;
+      color: #475569;
+      margin-top: 1.5mm;
+    }
+
+    /* ── Fields grid ── */
+    .fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4mm;
+    }
+    .field {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 3mm;
+      padding: 3mm 4mm;
+    }
+    .field-label { font-size: 2.3mm; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3mm; }
+    .field-value { font-size: 3.5mm; font-weight: 700; color: #1e293b; margin-top: 0.8mm; white-space: nowrap; }
+    .field-mono  { font-family: 'Courier New', monospace; font-size: 2.8mm; }
+
+    /* ── Status pill ── */
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 1.5mm;
+      font-size: 3mm;
+      font-weight: 700;
+      padding: 1.5mm 3.5mm;
+      border-radius: 3mm;
+      color: ${statusColor};
+      background: ${statusColor}18;
+      border: 1px solid ${statusColor}44;
+    }
+
+    /* ── Crypto section ── */
+    .crypto {
+      background: #0f172a;
+      border-radius: 4mm;
+      padding: 5mm 6mm;
+      display: flex;
+      flex-direction: column;
+      gap: 3mm;
+    }
+    .crypto-title { font-size: 2.8mm; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.4mm; }
+    .crypto-row   { display: flex; flex-direction: column; gap: 0.8mm; }
+    .crypto-label { font-size: 2mm; color: #64748b; font-weight: 600; text-transform: uppercase; }
+    .crypto-val   { font-family: 'Courier New', monospace; font-size: 2.3mm; color: #a5b4fc; word-break: break-all; }
+
+    /* ── Footer + QR ── */
+    .footer {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      border-top: 1px solid #e0e7ff;
+      padding-top: 5mm;
+      margin-top: auto;
+    }
+    .footer-text { font-size: 2.3mm; color: #94a3b8; max-width: 120mm; line-height: 1.5; }
+    .qr-box { text-align: center; }
+    .qr-box img { width: 28mm; height: 28mm; border: 1px solid #e2e8f0; border-radius: 2mm; display: block; }
+    .qr-label { font-size: 2mm; color: #94a3b8; margin-top: 1mm; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="seal">⛓</div>
+      <div>
+        <div class="inst-name">${credential.institution || 'Academic Institution'}</div>
+        <div class="inst-sub">Office of the Registrar · Blockchain-Anchored Records</div>
+      </div>
+    </div>
+    <div class="badge">✓ Verified on ChainCert</div>
+  </div>
+
+  <!-- Certificate title -->
+  <div>
+    <div class="cert-label">Official Academic Credential</div>
+    <div class="cert-title">${credential.course}</div>
+    <div class="cert-subtitle">Conferred upon <strong>${credential.studentName}</strong> in recognition of the successful completion of all prescribed requirements.</div>
+  </div>
+
+  <!-- Fields: labels MUST match extractor alias list exactly -->
+  <div class="fields">
+    <div class="field">
+      <div class="field-label">Credential ID:</div>
+      <div class="field-value field-mono">${credential.id}</div>
+    </div>
+    <div class="field">
+      <div class="field-label">Student Full Name:</div>
+      <div class="field-value">${credential.studentName}</div>
+    </div>
+    <div class="field">
+      <div class="field-label">Roll Number:</div>
+      <div class="field-value field-mono">${credential.studentRoll}</div>
+    </div>
+    <div class="field">
+      <div class="field-label">Issue Date:</div>
+      <div class="field-value">${rawIssueDate}</div>
+    </div>
+    <div class="field">
+      <div class="field-label">CGPA:</div>
+      <div class="field-value">${credential.cgpa || ''}</div>
+    </div>
+    <div class="field">
+      <div class="field-label">Course / Academic Degree:</div>
+      <div class="field-value">${credential.course}</div>
+    </div>
+    <div class="field" style="grid-column: span 2;">
+      <div class="field-label">Institution:</div>
+      <div class="field-value">${credential.institution || ''}</div>
+    </div>
+    <div class="field" style="grid-column: span 2;">
+      <div class="field-label">Credential Status</div>
+      <div class="field-value">
+        <span class="status-pill">${credential.status}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cryptographic Trust Section -->
+  <div class="crypto">
+    <div class="crypto-title">🔒 Cryptographic Trust Metadata</div>
+    <div class="crypto-row">
+      <span class="crypto-label">SHA-256 Certificate Hash</span>
+      <span class="crypto-val">${credential.sha256Hash || 'Not available'}</span>
+    </div>
+    <div class="crypto-row">
+      <span class="crypto-label">Merkle Root</span>
+      <span class="crypto-val">${credential.merkleRoot || 'Not available'}</span>
+    </div>
+    ${credential.merkleLeafIndex !== undefined ? `
+    <div class="crypto-row">
+      <span class="crypto-label">Merkle Leaf Index</span>
+      <span class="crypto-val">${credential.merkleLeafIndex}</span>
+    </div>` : ''}
+    ${credential.batch ? `
+    <div class="crypto-row">
+      <span class="crypto-label">Batch ID</span>
+      <span class="crypto-val">${credential.batch}</span>
+    </div>` : ''}
+  </div>
+
+  <!-- Footer + QR -->
+  <div class="footer">
+    <div class="footer-text">
+      This credential is digitally anchored on a blockchain-backed Merkle tree and can be independently verified at any time.
+      Verify at: <strong>${publicVerificationUrl}</strong>
+    </div>
+    <div class="qr-box">
+      <img src="${qrUrl}" alt="Verification QR" />
+      <div class="qr-label">Scan to verify</div>
+    </div>
+  </div>
+
+</div>
+<script>
+  // Auto-trigger print as soon as images load
+  window.addEventListener('load', function() {
+    setTimeout(function() { window.print(); window.close(); }, 400);
+  });
+<\/script>
+</body>
+</html>`;
+
+    const printWin = window.open('', '_blank', 'width=900,height=700');
+    if (!printWin) {
+      showToast('Pop-up blocked — please allow pop-ups and try again.');
+      setPdfLoading(false);
+      return;
+    }
+    printWin.document.write(html);
+    printWin.document.close();
+    setPdfLoading(false);
+    showToast('PDF certificate opened — choose "Save as PDF" in the print dialog.');
   };
 
   return (
@@ -219,12 +518,17 @@ export const StudentCredentialDetailsPage: React.FC = () => {
             {/* Official Action Toolbar */}
             <div className="flex flex-wrap items-center gap-3 pt-2">
               <button
-                onClick={() => showToast(`Certified PDF certificate downloaded for ${credential.id}`)}
-                className="bg-primary-container text-white hover:bg-primary px-5 h-11 rounded-xl font-semibold text-xs shadow-xs transition-all flex items-center justify-center gap-2"
+                onClick={downloadAsPDF}
+                disabled={pdfLoading}
+                className="bg-primary-container text-white hover:bg-primary px-5 h-11 rounded-xl font-semibold text-xs shadow-xs transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                 id="btn-download"
               >
-                <span className="material-symbols-outlined text-[20px]">download</span>
-                <span>Download Credential (PDF)</span>
+                {pdfLoading ? (
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <span className="material-symbols-outlined text-[20px]">download</span>
+                )}
+                <span>{pdfLoading ? 'Preparing PDF…' : 'Download Credential (PDF)'}</span>
               </button>
 
               <button

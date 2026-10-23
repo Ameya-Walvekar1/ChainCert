@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+
+{% block title %}ChainCert — Interactive Step-by-Step Complete Demo{% endblock %}
+
+{% block content %}
+<div class="page-title-section">
+    <h1 class="page-title">Interactive Module-by-Module Demonstration</h1>
+    <p class="page-subtitle">Walkthrough Pipeline: Module 1 ➔ Module 2 ➔ Module 3 ➔ Module 4</p>
+</div>
+
+<!-- STEP WIZARD BAR -->
+<div style="background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+        <a href="{{ url_for('complete_demo', step=1) }}" class="btn {% if demo.step == 1 %}btn-primary{% else %}btn-secondary{% endif %}" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">
+            1. M1: Certificate Records
+        </a>
+        <span style="color: var(--text-muted);">➔</span>
+        <a href="{{ url_for('complete_demo', step=2) }}" class="btn {% if demo.step == 2 %}btn-primary{% else %}btn-secondary{% endif %}" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">
+            2. M2: SHA-256 Hasher
+        </a>
+        <span style="color: var(--text-muted);">➔</span>
+        <a href="{{ url_for('complete_demo', step=3) }}" class="btn {% if demo.step == 3 %}btn-primary{% else %}btn-secondary{% endif %}" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">
+            3. M3: Merkle Tree Builder
+        </a>
+        <span style="color: var(--text-muted);">➔</span>
+        <a href="{{ url_for('complete_demo', step=4) }}" class="btn {% if demo.step == 4 %}btn-primary{% else %}btn-secondary{% endif %}" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">
+            4. M4: Block Chaining
+        </a>
+    </div>
+
+    <div>
+        {% if demo.step > 1 %}
+            <a href="{{ url_for('complete_demo', step=demo.step-1) }}" class="btn btn-secondary" style="font-size: 0.85rem;">← Previous Step</a>
+        {% endif %}
+        {% if demo.step < 4 %}
+            <a href="{{ url_for('complete_demo', step=demo.step+1) }}" class="btn btn-primary" style="font-size: 0.85rem;">Next Step: Step {{ demo.step + 1 }} ➔</a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- STEP 1: MODULE 1 CERTIFICATE RECORDS -->
+{% if demo.step == 1 %}
+    <div style="background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h2 style="color: #ffffff; font-size: 1.3rem;">Step 1 of 4: Module 1 — Certificate Ingestion & Storage</h2>
+            <span class="card-badge badge-working" style="margin: 0;">STATUS: REGISTERED IN SQLITE</span>
+        </div>
+
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
+            Module 1 parses plain text certificate records, validates mandatory academic fields, assigns unique Certificate IDs, and stores them in the SQLite database (<code style="color: #a5f3fc;">data/chaincert.db</code>).
+        </p>
+
+        <h4 style="color: #ffffff; margin-bottom: 1rem; font-size: 1rem;">Registered Student Certificates (4 Records):</h4>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+            {% for cert in demo.batch_certs %}
+                <div style="background: #0f172a; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.4rem;">
+                        <strong style="color: #a5f3fc;">{{ cert.certificate_id }}</strong>
+                        <span style="font-size: 0.75rem; color: var(--accent-green);">Status: {{ cert.status }}</span>
+                    </div>
+                    <div style="font-weight: 700; color: #ffffff; font-size: 1rem; margin-bottom: 0.2rem;">🎓 {{ cert.student_name }}</div>
+                    <div style="font-size: 0.85rem; color: var(--text-muted);">
+                        Roll: {{ cert.roll_number }} | Course: {{ cert.course }} | CGPA: <strong>{{ cert.cgpa }}</strong>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div style="background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: 8px; padding: 1rem; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <strong style="color: #ffffff;">Module 1 Ingestion Complete!</strong>
+                <p style="font-size: 0.85rem; color: var(--text-muted);">
+                    These 4 student records will now be passed to Module 2 to generate SHA-256 digests.
+                </p>
+            </div>
+            <a href="{{ url_for('complete_demo', step=2) }}" class="btn btn-primary">
+                Proceed to Step 2: Module 2 (SHA-256 Hasher) ➔
+            </a>
+        </div>
+    </div>
+{% endif %}
+
+<!-- STEP 2: MODULE 2 HASHING ENGINE -->
+{% if demo.step == 2 %}
+    <div style="background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h2 style="color: #ffffff; font-size: 1.3rem;">Step 2 of 4: Module 2 — SHA-256 Hashing Engine</h2>
+            <span class="card-badge badge-working" style="margin: 0;">STATUS: SHA-256 DIGESTS GENERATED</span>
+        </div>
+
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
+            Module 2 acts as the <strong>Single Source of Truth (SSoT)</strong> for hashing. It formats raw records into pipe-delimited canonical strings and computes 64-character hexadecimal SHA-256 digests.
+        </p>
+
+        <h4 style="color: #ffffff; margin-bottom: 1rem; font-size: 1rem;">Module 2 Canonicalization & SHA-256 Output Table:</h4>
+
+        <div class="table-container" style="margin-bottom: 1.5rem;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Cert ID</th>
+                        <th>Student Name</th>
+                        <th>Canonical Pipe String (Module 2 Format)</th>
+                        <th>Generated SHA-256 Digest</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cert in demo.batch_certs %}
+                        <tr>
+                            <td><strong style="color: #a5f3fc;">{{ cert.certificate_id }}</strong></td>
+                            <td><strong style="color: #ffffff;">🎓 {{ cert.student_name }}</strong></td>
+                            <td><span style="font-family: monospace; font-size: 0.75rem; color: #94a3b8;">{{ cert.canonical_data }}</span></td>
+                            <td><span class="hash-highlight" style="font-family: monospace; font-size: 0.8rem;">{{ cert.certificate_hash }}</span></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div style="background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: 8px; padding: 1rem; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <strong style="color: #ffffff;">Module 2 Hashing Complete!</strong>
+                <p style="font-size: 0.85rem; color: var(--text-muted);">
+                    All 4 SHA-256 hashes are deterministic and tamper-evident. Passing leaf hashes to Module 3.
+                </p>
+            </div>
+            <a href="{{ url_for('complete_demo', step=3) }}" class="btn btn-primary">
+                Proceed to Step 3: Module 3 (Merkle Tree Builder) ➔
+            </a>
+        </div>
+    </div>
+{% endif %}
+
+<!-- STEP 3: MODULE 3 MERKLE TREE BUILDER -->
+{% if demo.step == 3 %}
+    <div style="background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h2 style="color: #ffffff; font-size: 1.3rem;">Step 3 of 4: Module 3 — Merkle Tree Builder</h2>
+            <span class="card-badge badge-working" style="margin: 0;">STATUS: MERKLE ROOT COMPUTED</span>
+        </div>
+
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
+            Module 3 groups the 4 student certificate hashes into a binary Merkle Tree and computes <strong>ONE master Merkle Root</strong>.
+        </p>
+
+        <!-- COMPUTED MERKLE ROOT -->
+        <div style="background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: 10px; padding: 1.25rem; margin-bottom: 1.5rem;">
+            <div style="font-size: 0.75rem; color: var(--primary-cyan); font-weight: 700; text-transform: uppercase; margin-bottom: 0.3rem;">
+                COMPUTED BATCH MERKLE ROOT
+            </div>
+            <div class="code-box" style="font-size: 1.05rem; color: #ffffff; font-weight: 700;">{{ demo.merkle_root }}</div>
+        </div>
+
+        <!-- VISUAL DIAGRAM WITH STUDENT NAMES -->
+        <h4 style="color: #ffffff; margin-bottom: 1rem; font-size: 1rem;">Visual Merkle Tree (Student Names & Connected Levels):</h4>
+
+        <div class="tree-container" style="margin-bottom: 1.5rem;">
+            <div class="tree-level-container">
+                <!-- ROOT LEVEL -->
+                <div class="tree-level">
+                    <div class="tree-node root">
+                        <div class="node-title">MASTER MERKLE ROOT</div>
+                        <div class="node-student-name" style="color: var(--primary-cyan);">Batch SEM1_2026</div>
+                        <div class="node-hash">{{ demo.tree.merkle_root[:20] }}...</div>
+                    </div>
+                </div>
+
+                <div class="tree-connector-row">
+                    <span>↑ Combined SHA-256 Parent Hash ↑</span>
+                </div>
+
+                <!-- LEVEL 1 -->
+                {% if demo.tree.height > 1 %}
+                    <div class="tree-level">
+                        {% for node in demo.tree.levels[1] %}
+                            <div class="tree-node">
+                                <div class="node-title">Parent Node [{{ loop.index0 }}]</div>
+                                <div class="node-student-name">Combined Pair Hash</div>
+                                <div class="node-hash">{{ node[:16] }}...</div>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="tree-connector-row">
+                        <span>↑ Paired Leaf Digests ↑</span>
+                    </div>
+                {% endif %}
+
+                <!-- LEAF LEVEL -->
+                <div class="tree-level" style="flex-wrap: wrap;">
+                    {% for cert in demo.batch_certs %}
+                        <div class="tree-node leaf">
+                            <div class="node-title">Leaf [{{ loop.index0 }}] — {{ cert.certificate_id }}</div>
+                            <div class="node-student-name">🎓 {{ cert.student_name }}</div>
+                            <div class="node-hash">{{ cert.certificate_hash[:16] }}...</div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- VERIFIED PROOF BOX -->
+        <div style="background: #0f172a; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+            <div style="color: var(--accent-green); font-weight: 700; font-size: 0.9rem;">
+                ✓ Verified Student Membership Proof: Rahul Sharma (CC001)
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">
+                Successfully verified against Merkle Root <code style="color: #38bdf8;">{{ demo.merkle_root[:16] }}...</code> in {{ demo.proof_p0.proof_steps|length }} proof steps.
+            </p>
+        </div>
+
+        <div style="background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: 8px; padding: 1rem; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <strong style="color: #ffffff;">Module 3 Merkle Tree Complete!</strong>
+                <p style="font-size: 0.85rem; color: var(--text-muted);">
+                    Merkle Root generated. Passing Merkle Root to Module 4 for block chaining.
+                </p>
+            </div>
+            <a href="{{ url_for('complete_demo', step=4) }}" class="btn btn-primary">
+                Proceed to Step 4: Module 4 (Block Chaining) ➔
+            </a>
+        </div>
+    </div>
+{% endif %}
+
+<!-- STEP 4: MODULE 4 BLOCK CHAINING -->
+{% if demo.step == 4 %}
+    <div style="background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h2 style="color: #ffffff; font-size: 1.3rem;">Step 4 of 4: Module 4 — Block Chaining & Validation</h2>
+            <div class="card-badge badge-working" style="margin: 0; font-size: 0.9rem; padding: 0.4rem 0.8rem; background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #34d399;">
+                ✓ CHAIN STATUS: VALID
+            </div>
+        </div>
+
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
+            Module 4 seals the Merkle Root into Block #1, links it to previous blocks via <code style="color: #fbbf24;">previous_root</code>, and confirms overall chain validation.
+        </p>
+
+        <!-- BLOCK #1 CARD -->
+        {% for rec in demo.block_records %}
+            {% set block = rec.block %}
+            {% set b_certs = rec.certificates %}
+            <div style="background: #0f172a; border: 1px solid var(--primary-cyan); border-radius: 10px; padding: 1.25rem; margin-bottom: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 0.6rem; margin-bottom: 1rem;">
+                    <div>
+                        <strong style="color: var(--primary-cyan); font-size: 1rem;">BLOCK #{{ block.block_id }}</strong>
+                        &nbsp;|&nbsp; <span style="color: #ffffff;">Batch: {{ block.batch_id }}</span>
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">Timestamp: {{ block.timestamp }}</div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <label style="font-size: 0.75rem; color: #fbbf24; font-weight: 700; display: block; margin-bottom: 0.25rem;">PREVIOUS ROOT POINTER:</label>
+                        <div class="code-box" style="font-size: 0.8rem; color: var(--text-muted); margin: 0; padding: 0.4rem;">
+                            {{ block.previous_root or 'None (Genesis Block)' }}
+                        </div>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.75rem; color: var(--primary-cyan); font-weight: 700; display: block; margin-bottom: 0.25rem;">CURRENT MERKLE ROOT (MODULE 3):</label>
+                        <div class="code-box" style="font-size: 0.8rem; color: #38bdf8; margin: 0; padding: 0.4rem;">
+                            {{ block.merkle_root }}
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1.25rem;">
+                    <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 0.25rem;">BLOCK HEADER SHA-256 SEAL:</label>
+                    <div class="code-box" style="font-size: 0.8rem; color: #a5f3fc; padding: 0.4rem;">
+                        {{ block.block_hash }}
+                    </div>
+                </div>
+
+                <!-- CONTAINED CERTIFICATES -->
+                <div style="background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem;">
+                    <h5 style="color: #ffffff; font-size: 0.85rem; margin-bottom: 0.5rem;">🎓 Student Certificates Sealed in Block #{{ block.block_id }}:</h5>
+                    <table style="font-size: 0.8rem;">
+                        <thead>
+                            <tr>
+                                <th>Cert ID</th>
+                                <th>Student Name</th>
+                                <th>Roll No</th>
+                                <th>Course</th>
+                                <th>CGPA</th>
+                                <th>Module 2 SHA-256 Digest</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in b_certs %}
+                                <tr>
+                                    <td><strong style="color: #a5f3fc;">{{ c.certificate_id }}</strong></td>
+                                    <td><strong style="color: #ffffff;">🎓 {{ c.student_name }}</strong></td>
+                                    <td>{{ c.roll_number }}</td>
+                                    <td>{{ c.course }}</td>
+                                    <td>{{ c.cgpa }}</td>
+                                    <td><span class="hash-highlight" style="font-family: monospace;">{{ c.certificate_hash[:16] }}...</span></td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        {% endfor %}
+
+        <!-- VICTORY FINAL BANNER -->
+        <div style="background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 12px; padding: 1.5rem; text-align: center;">
+            <h2 style="color: var(--accent-green); font-size: 1.4rem; margin-bottom: 0.5rem;">🎉 Complete Pipeline Walkthrough Finished Successfully!</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.25rem;">
+                All 4 Modules executed cleanly in sequence: Records Ingested (M1) ➔ SHA-256 Hashed (M2) ➔ Merkle Tree Built (M3) ➔ Block Chained & Validated (M4).
+            </p>
+            <div style="display: flex; gap: 1rem; justify-content: center;">
+                <a href="{{ url_for('complete_demo', step=1) }}" class="btn btn-secondary">🔄 Restart Demo Walkthrough</a>
+                <a href="{{ url_for('tamper_test') }}" class="btn btn-primary">⚡ Go to Tamper Testing Suite</a>
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}

@@ -1,3 +1,4 @@
+import { getPublicOrigin } from './publicOrigin';
 import { Credential } from '../types';
 import { apiRequest } from './apiConfig';
 
@@ -21,8 +22,36 @@ interface BackendCert {
   revoked_at?: string;
 }
 
+// ---------------------------------------------------------------------------
+// Authentication user shape
+// ---------------------------------------------------------------------------
+interface StoredAuth {
+  access_token?: string;
+  token?: string;
+
+  user?: {
+    id?: string;
+    email?: string;
+    display_name?: string;
+    role?: string;
+    institution_id?: string;
+    institutionId?: string;
+  };
+
+  id?: string;
+  email?: string;
+  display_name?: string;
+  role?: string;
+  institution_id?: string;
+  institutionId?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Map backend certificate → frontend Credential
+// ---------------------------------------------------------------------------
 function mapCert(r: BackendCert): Credential {
   const status = (r.status?.toUpperCase() ?? 'ACTIVE') as Credential['status'];
+
   return {
     id: r.certificate_id,
     studentName: r.student_name ?? '',
@@ -35,86 +64,311 @@ function mapCert(r: BackendCert): Credential {
     batch: r.batch_id ?? '',
     grade: '',
     cgpa: r.cgpa,
-    status: ['ACTIVE', 'CONFERRED', 'REVOKED', 'REVIEW_REQUIRED'].includes(status) ? status : 'ACTIVE',
+    status: [
+      'ACTIVE',
+      'CONFERRED',
+      'REVOKED',
+      'REVIEW_REQUIRED',
+    ].includes(status)
+      ? status
+      : 'ACTIVE',
     sha256Hash: r.certificate_hash ?? '',
     merkleRoot: r.merkle_root ?? '',
     merkleLeafIndex: r.merkle_leaf_index,
     revocationReason: r.revocation_reason,
     revokedAt: r.revoked_at,
+
     qrCodeUrl: `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
-      `${window.location.origin}/verify?id=${encodeURIComponent(r.certificate_id)}`
+      `${getPublicOrigin()}/verify/result?channel=QR_SCAN&id=${encodeURIComponent(r.certificate_id)}`
     )}`,
   };
 }
 
-export const credentialService = {
-  async getAll(): Promise<Credential[]> {
-    try {
-      const data = await apiRequest<{ certificates: BackendCert[] }>('/certificates');
-      return (data.certificates ?? []).map(mapCert);
-    } catch (err) {
-      console.warn('credentialService.getAll failed, using empty list:', err);
-      return [];
+// ---------------------------------------------------------------------------
+// Get institution ID from the currently authenticated account
+// ---------------------------------------------------------------------------
+function getAuthenticatedInstitutionId(): string {
+  const storedAuth = localStorage.getItem('chaincert_auth_user');
+
+  if (!storedAuth) {
+    throw new Error(
+      'You are not logged in. Please log in as an institution user.'
+    );
+  }
+
+  let auth: StoredAuth;
+
+  try {
+    auth = JSON.parse(storedAuth) as StoredAuth;
+  } catch {
+    throw new Error(
+      'Your authentication session is invalid. Please log in again.'
+    );
+  }
+
+  // The authenticated User stores institutionId (mapped from backend institution_id)
+  const rawId =
+    auth.institutionId ??
+    auth.institution_id ??
+    auth.user?.institutionId ??
+    auth.user?.institution_id;
+
+  const institutionId = rawId !== undefined && rawId !== null ? String(rawId).trim() : '';
+
+  if (!institutionId) {
+    // If logged in as PLATFORM_ADMIN or institution role without explicit id, default to MMCOE (1)
+    if (auth.role === 'institution' || auth.role === 'PLATFORM_ADMIN') {
+      return '1';
     }
+    throw new Error(
+      'Institution ID is missing from your logged-in account.'
+    );
+  }
+
+  return institutionId;
+}
+
+// Change notification listener for live updates across views
+type ChangeListener = () => void;
+const changeListeners = new Set<ChangeListener>();
+
+function notifyChange(): void {
+  changeListeners.forEach((cb) => {
+    try {
+      cb();
+    } catch (e) {
+      console.error('Error in credential change listener:', e);
+    }
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Credential service
+// ---------------------------------------------------------------------------
+export const credentialService = {
+  subscribe(listener: ChangeListener): () => void {
+    changeListeners.add(listener);
+    return () => changeListeners.delete(listener);
+  },
+
+  async getAll(): Promise<Credential[]> {
+    const raw = localStorage.getItem('chaincert_auth_user');
+    let isStudent = false;
+    if (raw) {
+      try {
+        const u = JSON.parse(raw);
+        isStudent = u.role === 'student' || u.role === 'STUDENT';
+      } catch {
+        // ignore
+      }
+    }
+    const endpoint = isStudent ? '/students/me/certificates' : '/certificates';
+    const data = await apiRequest<{ certificates: BackendCert[] }>(endpoint);
+    return (data.certificates ?? []).map(mapCert);
   },
 
   async getById(id: string): Promise<Credential | null> {
+    const raw = localStorage.getItem('chaincert_auth_user');
+    let isStudent = false;
+    if (raw) {
+      try {
+        const u = JSON.parse(raw);
+        isStudent = u.role === 'student' || u.role === 'STUDENT';
+      } catch {
+        // ignore
+      }
+    }
+    const endpoint = isStudent
+      ? `/students/me/certificates/${encodeURIComponent(id)}`
+      : `/certificates/${encodeURIComponent(id)}`;
     try {
-      const data = await apiRequest<{ certificate: BackendCert }>(`/certificates/${encodeURIComponent(id)}`);
+      const data = await apiRequest<{ certificate: BackendCert }>(endpoint);
       return data.certificate ? mapCert(data.certificate) : null;
     } catch {
       return null;
     }
   },
 
+  async getInstitutionStats(): Promise<{
+    totalRegistered: number;
+    issuedCredentials: number;
+    validCredentials: number;
+    revokedCredentials: number;
+    reviewRequired: number;
+  }> {
+    try {
+      const res = await apiRequest<{
+        success: boolean;
+        total_registered: number;
+        issued_credentials: number;
+        valid_credentials: number;
+        revoked_credentials: number;
+        review_required: number;
+      }>('/institution/stats');
+      return {
+        totalRegistered: res.total_registered,
+        issuedCredentials: res.issued_credentials,
+        validCredentials: res.valid_credentials,
+        revokedCredentials: res.revoked_credentials,
+        reviewRequired: res.review_required,
+      };
+    } catch {
+      // Fallback calculation from getAll() if endpoint is temporarily unreachable
+      const creds = await this.getAll();
+      const total = creds.length;
+      const revoked = creds.filter(c => c.status === 'REVOKED').length;
+      return {
+        totalRegistered: total,
+        issuedCredentials: total,
+        validCredentials: total - revoked,
+        revokedCredentials: revoked,
+        reviewRequired: 0,
+      };
+    }
+  },
+
+  async getStudentStats(): Promise<{
+    totalCredentials: number;
+    validCredentials: number;
+    revokedCredentials: number;
+  }> {
+    try {
+      const res = await apiRequest<{
+        success: boolean;
+        total_credentials: number;
+        valid_credentials: number;
+        revoked_credentials: number;
+      }>('/students/me/stats');
+      return {
+        totalCredentials: res.total_credentials,
+        validCredentials: res.valid_credentials,
+        revokedCredentials: res.revoked_credentials,
+      };
+    } catch {
+      const creds = await this.getAll();
+      const total = creds.length;
+      const revoked = creds.filter(c => c.status === 'REVOKED').length;
+      return {
+        totalCredentials: total,
+        validCredentials: total - revoked,
+        revokedCredentials: revoked,
+      };
+    }
+  },
+
+  // -------------------------------------------------------------------------
+  // Register a new certificate
+  //
+  // IMPORTANT:
+  // The institution is NOT taken from the form.
+  // It is automatically obtained from the authenticated institution account.
+  // -------------------------------------------------------------------------
   async register(newCred: {
     id: string;
     studentName: string;
     studentRoll: string;
+    studentEmail?: string;
     course: string;
     issueDate: string;
-    institution: string;
+
+    // Kept optional for compatibility with the existing form.
+    // This value is intentionally NOT used.
+    institution?: string;
+
     cgpa?: string;
   }): Promise<Credential> {
+    // Get institution from the logged-in account.
+    const institutionId = getAuthenticatedInstitutionId();
+
     const payload = {
       certificate: {
-        certificate_id: newCred.id,
-        student_name: newCred.studentName,
-        roll_number: newCred.studentRoll,
-        course: newCred.course,
-        cgpa: newCred.cgpa ?? '',
-        issue_date: newCred.issueDate,
-        institution_id: newCred.institution,
+        certificate_id: newCred.id.trim(),
+        student_name: newCred.studentName.trim(),
+        roll_number: newCred.studentRoll.trim(),
+        student_email: newCred.studentEmail ? newCred.studentEmail.trim() : undefined,
+        course: newCred.course.trim(),
+        cgpa: (newCred.cgpa && newCred.cgpa.trim()) ? newCred.cgpa.trim() : '9.80',
+        issue_date: newCred.issueDate.trim(),
+
+        // IMPORTANT:
+        // Always use the authenticated user's institution.
+        // Do not trust the institution entered/selected in the form.
+        institution_id: institutionId,
       },
     };
-    const data = await apiRequest<{ certificate: BackendCert }>('/certificates', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    });
+
+    console.log(
+      'Registering certificate for authenticated institution:',
+      institutionId
+    );
+
+    const data = await apiRequest<{ certificate: BackendCert }>(
+      '/certificates',
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }
+    );
+
+    notifyChange();
     return mapCert(data.certificate);
   },
 
+  // -------------------------------------------------------------------------
+  // Revoke certificate
+  // -------------------------------------------------------------------------
   async revoke(id: string, reason: string): Promise<Credential> {
-    await apiRequest<unknown>(`/certificates/${encodeURIComponent(id)}/revoke`, {
-      method: 'POST',
-      body: JSON.stringify({ reason }),
-    });
+    await apiRequest<unknown>(
+      `/certificates/${encodeURIComponent(id)}/revoke`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      }
+    );
+
     // Fetch updated record
     const updated = await this.getById(id);
-    if (!updated) throw new Error('Certificate not found after revoke');
+
+    if (!updated) {
+      throw new Error('Certificate not found after revoke');
+    }
+
+    notifyChange();
     return updated;
   },
 
-  // The backend does not expose a PATCH endpoint; return the merged object locally.
-  async update(id: string, updates: Partial<Credential>): Promise<Credential> {
-    console.warn('credentialService.update: no backend endpoint; changes are display-only.', id, updates);
+  // -------------------------------------------------------------------------
+  // Update certificate
+  // Backend does not currently expose a PATCH endpoint.
+  // -------------------------------------------------------------------------
+  async update(
+    id: string,
+    updates: Partial<Credential>
+  ): Promise<Credential> {
+    console.warn(
+      'credentialService.update: no backend endpoint; changes are display-only.',
+      id,
+      updates
+    );
+
     const existing = await this.getById(id);
-    if (!existing) throw new Error('Certificate not found');
+
+    if (!existing) {
+      throw new Error('Certificate not found');
+    }
+
     return { ...existing, ...updates };
   },
 
-  // Bulk issuance is not supported by the backend API; kept as no-op placeholder.
-  async processBulkIssuance(_batch: unknown): Promise<{ issuedCount: number; batchId: string }> {
-    throw new Error('Bulk issuance is not implemented by the backend API.');
+  // -------------------------------------------------------------------------
+  // Bulk issuance
+  // Backend does not currently support this.
+  // -------------------------------------------------------------------------
+  async processBulkIssuance(
+    _batch: unknown
+  ): Promise<{ issuedCount: number; batchId: string }> {
+    throw new Error(
+      'Bulk issuance is not implemented by the backend API.'
+    );
   },
 };

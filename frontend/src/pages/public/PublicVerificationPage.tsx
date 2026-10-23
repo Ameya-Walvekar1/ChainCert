@@ -16,9 +16,10 @@ export const PublicVerificationPage: React.FC = () => {
   useEffect(() => {
     const idParam = searchParams.get('id');
     if (idParam) {
-      setCertId(idParam);
+      // Direct links / QR scans (e.g. /verify?id=...) go straight to the integrity result.
+      navigate(`/verify/result?id=${encodeURIComponent(idParam)}&channel=QR_SCAN`, { replace: true });
     }
-  }, [searchParams]);
+  }, [searchParams, navigate]);
 
   const handleIdSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,7 +60,9 @@ export const PublicVerificationPage: React.FC = () => {
     setIsVerifying(true);
     try {
       const res = await verificationService.verifyUploadedFile(selectedFile);
-      navigate(`/verify/result?id=${encodeURIComponent(res.certificateId)}&channel=DOCUMENT_UPLOAD`);
+      navigate(`/verify/result?id=${encodeURIComponent(res.certificateId)}&channel=DOCUMENT_UPLOAD`, {
+        state: { verificationResult: res },
+      });
     } finally {
       setIsVerifying(false);
     }

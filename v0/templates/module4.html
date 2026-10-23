@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block title %}Module 4 — Block Chaining{% endblock %}
+
+{% block content %}
+<!-- PIPELINE STEP INDICATOR BAR -->
+<div style="background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem 1.5rem; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+    <div style="font-weight: 700; color: var(--primary-cyan); font-size: 0.9rem; text-transform: uppercase;">Pipeline Tracker:</div>
+    <div style="display: flex; gap: 0.75rem; font-size: 0.85rem; flex-wrap: wrap; align-items: center;">
+        <span style="color: var(--text-muted);">1. Form Entry</span>
+        <span style="color: var(--text-muted);">➔</span>
+        <span style="color: var(--text-muted);">2. SHA-256 Hasher</span>
+        <span style="color: var(--text-muted);">➔</span>
+        <span style="color: var(--text-muted);">3. Merkle Tree</span>
+        <span style="color: var(--text-muted);">➔</span>
+        <span style="background: var(--primary-cyan); color: #0f172a; font-weight: 700; padding: 0.3rem 0.7rem; border-radius: 20px;">4. Block Chaining (Active)</span>
+    </div>
+</div>
+
+<div class="page-title-section">
+    <h1 class="page-title">MODULE 4: Block Chaining</h1>
+    <p class="page-subtitle">Lightweight Hash Chaining, Batch Linkage & Block Header Tamper Detection</p>
+</div>
+
+<!-- SIMPLE & EASY EXPLANATION CARDS -->
+<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.25rem; margin-bottom: 2rem;">
+    <div class="info-card" style="margin: 0; border-left-color: var(--primary-cyan);">
+        <h4>🔗 What is Module 4?</h4>
+        <p>
+            Module 4 acts like an <strong>unalterable digital ledger</strong>. It takes the Merkle Root computed in Module 3 for a batch of student certificates and seals it inside a <strong>Block</strong>.
+        </p>
+    </div>
+
+    <div class="info-card" style="margin: 0; border-left-color: #f59e0b;">
+        <h4>⛓️ How does Block Chaining work?</h4>
+        <p>
+            Every new block stores the <strong>Previous Block's Merkle Root</strong> as a link (<code style="color: #fbbf24;">previous_root</code>). This links Block 1 ➔ Block 2 ➔ Block 3 in a continuous chain.
+        </p>
+    </div>
+
+    <div class="info-card" style="margin: 0; border-left-color: var(--accent-green);">
+        <h4>🛡️ How is Tampering Caught?</h4>
+        <p>
+            If anyone changes a student's grade in Block 1, Block 1's Merkle Root changes $\rightarrow$ Block 2's <code style="color: #fbbf24;">previous_root</code> link breaks $\rightarrow$ <strong>CHAIN STATUS: INVALID</strong>!
+        </p>
+    </div>
+</div>
+
+<!-- LIVE CHAIN VALIDATION BANNER -->
+<div style="background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; margin-bottom: 2.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h3 style="color: #ffffff; margin-bottom: 0.25rem;">Live Chain Integrity Status</h3>
+        <p style="color: var(--text-muted); font-size: 0.88rem;">
+            Automatically checks if every block's <code style="color: #fbbf24;">previous_root</code> matches the prior block's Merkle Root.
+        </p>
+    </div>
+    <div>
+        {% if validation.is_valid %}
+            <div class="card-badge badge-working" style="font-size: 1rem; padding: 0.5.rem 1.25rem; background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #34d399;">
+                ✓ CHAIN STATUS: VALID (Intact)
+            </div>
+        {% else %}
+            <div class="card-badge" style="font-size: 1rem; padding: 0.5rem 1.25rem; background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444;">
+                ✗ CHAIN STATUS: INVALID (Tampered)
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if not validation.is_valid %}
+    <div class="alert alert-danger" style="margin-bottom: 2rem;">
+        <div>
+            <strong>Chain Integrity Failures Caught by Module 4:</strong>
+            <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">
+                {% for err in validation.errors %}
+                    <li>{{ err }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+{% endif %}
+
+<!-- VISUAL CHAIN LINKAGE & CERTIFICATE CONTENTS -->
+<h3 style="font-size: 1.2rem; margin-bottom: 1.25rem; color: #ffffff;">Block Chain History & Contained Student Certificates</h3>
+
+<div style="display: flex; flex-direction: column; gap: 2rem; margin-bottom: 2.5rem;">
+    {% for rec in block_records %}
+        {% set block = rec.block %}
+        {% set b_certs = rec.certificates %}
+        <div style="background: var(--panel-bg); border: 1px solid {% if loop.last %}var(--primary-cyan){% else %}var(--border-color){% endif %}; border-radius: 12px; padding: 1.5rem;">
+            
+            <!-- BLOCK HEADER BAR -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.85rem; flex-wrap: wrap; gap: 0.5rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <span style="background: var(--primary-cyan); color: #0f172a; font-weight: 800; padding: 0.3rem 0.75rem; border-radius: 6px; font-size: 0.95rem;">
+                        BLOCK #{{ block.block_id }}
+                    </span>
+                    <strong style="color: #ffffff; font-size: 1.15rem;">Batch: {{ block.batch_id }}</strong>
+                    <span style="background: rgba(148, 163, 184, 0.15); color: #a5f3fc; font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 4px;">
+                        {{ b_certs|length }} Student Certificates
+                    </span>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">
+                    Timestamp: {{ block.timestamp }}
+                </div>
+            </div>
+
+            <!-- LINKAGE POINTERS -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+                <div style="background: rgba(15, 23, 42, 0.7); padding: 0.85rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <label style="font-size: 0.75rem; color: #fbbf24; font-weight: 700; display: block; margin-bottom: 0.3rem; text-transform: uppercase;">
+                        🔗 PREVIOUS ROOT POINTER (LINK TO PRIOR BLOCK):
+                    </label>
+                    <div class="code-box" style="font-size: 0.8rem; color: {% if block.previous_root %}#fbbf24{% else %}var(--text-muted){% endif %}; margin: 0; padding: 0.5rem;">
+                        {{ block.previous_root or 'None (First Block / Genesis)' }}
+                    </div>
+                </div>
+
+                <div style="background: rgba(15, 23, 42, 0.7); padding: 0.85rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <label style="font-size: 0.75rem; color: var(--primary-cyan); font-weight: 700; display: block; margin-bottom: 0.3rem; text-transform: uppercase;">
+                        🌳 BATCH MERKLE ROOT (FROM MODULE 3):
+                    </label>
+                    <div class="code-box" style="font-size: 0.8rem; color: #38bdf8; margin: 0; padding: 0.5rem;">
+                        {{ block.merkle_root }}
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 0.25rem;">BLOCK HEADER SHA-256 SEAL (COMPUTED OVER ALL BLOCK FIELDS):</label>
+                <div class="code-box" style="font-size: 0.8rem; color: #a5f3fc; padding: 0.5rem;">
+                    {{ block.block_hash }}
+                </div>
+            </div>
+
+            <!-- CONTAINED STUDENT CERTIFICATES -->
+            <div style="background: #0f172a; border: 1px solid var(--border-color); border-radius: 8px; padding: 1.25rem;">
+                <h5 style="color: #ffffff; font-size: 0.9rem; margin-bottom: 0.85rem; display: flex; align-items: center; justify-content: space-between;">
+                    <span>🎓 Student Certificates Sealed in Block #{{ block.block_id }}:</span>
+                    <span style="font-size: 0.75rem; color: var(--accent-green); font-weight: 600;">✓ All Module 2 Hashes Included</span>
+                </h5>
+
+                <table style="font-size: 0.85rem;">
+                    <thead>
+                        <tr>
+                            <th>Cert ID</th>
+                            <th>Student Name</th>
+                            <th>Roll No</th>
+                            <th>Course</th>
+                            <th>CGPA</th>
+                            <th>Module 2 SHA-256 Digest</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in b_certs %}
+                            <tr>
+                                <td><strong style="color: #a5f3fc;">{{ c.certificate_id }}</strong></td>
+                                <td><strong style="color: #ffffff;">🎓 {{ c.student_name }}</strong></td>
+                                <td>{{ c.roll_number }}</td>
+                                <td>{{ c.course }}</td>
+                                <td>{{ c.cgpa }}</td>
+                                <td><span class="hash-highlight" style="font-family: monospace; font-size: 0.8rem;">{{ c.certificate_hash }}</span></td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="6" style="color: var(--text-muted); text-align: center;">No individual certificate records mapped.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {% if not loop.last %}
+            <div style="text-align: center; color: var(--primary-cyan); font-weight: 700; font-size: 1rem; margin: -0.5rem 0; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                <span>↓</span>
+                <span style="background: rgba(6, 182, 212, 0.15); border: 1px solid rgba(6, 182, 212, 0.3); padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.8rem;">
+                    CHAIN LINKED: Block #{{ loop.index + 1 }}'s previous_root matches Block #{{ loop.index }}'s Merkle Root
+                </span>
+                <span>↓</span>
+            </div>
+        {% endif %}
+    {% else %}
+        <div style="padding: 3rem; text-align: center; color: var(--text-muted); background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px;">
+            No blocks in chain yet. Run the Complete Demo or add a batch below.
+        </div>
+    {% endfor %}
+</div>
+
+<!-- ADD BATCH FORM -->
+<div style="background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem;">
+    <h3 style="margin-bottom: 1rem; color: #ffffff;">Append Another Batch to Chain</h3>
+    <form action="{{ url_for('module4_add_batch') }}" method="POST" style="display: flex; gap: 1rem; align-items: flex-end;">
+        <div class="form-group" style="margin: 0; flex: 1;">
+            <label>Batch ID</label>
+            <input type="text" name="batch_id" class="form-control" value="SEM3_2026" placeholder="SEM3_2026">
+        </div>
+        <button type="submit" class="btn btn-primary">➕ ADD BATCH BLOCK</button>
+    </form>
+</div>
+{% endblock %}

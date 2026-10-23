@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}ChainCert — Home Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-title-section">
+    <h1 class="page-title">Tamper-Evident Academic Credential Verification System</h1>
+    <p class="page-subtitle">ChainCert Unified Architecture (Modules 1–4)</p>
+</div>
+
+<div style="background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.25); border-radius: 12px; padding: 1.25rem; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between;">
+    <div>
+        <h4 style="color: var(--primary-cyan); margin-bottom: 0.25rem; font-size: 1rem;">System Status: Fully Operational</h4>
+        <p style="color: var(--text-muted); font-size: 0.88rem;">
+            Modules 1 through 4 are integrated and verified end-to-end.
+        </p>
+    </div>
+    <a href="{{ url_for('complete_demo') }}" class="btn btn-primary">▶ Run Complete Demo</a>
+</div>
+
+<h2 style="font-size: 1.3rem; margin-bottom: 1.25rem; color: #ffffff;">Core System Modules</h2>
+
+<div class="card-grid">
+    <!-- MODULE 1 -->
+    <div class="module-card">
+        <div>
+            <span class="card-badge badge-working">STATUS: WORKING</span>
+            <h3>MODULE 1</h3>
+            <p style="font-weight: 600; color: var(--primary-cyan); margin-bottom: 0.5rem;">Certificate & Record Management</p>
+            <p>Form-based certificate data entry, metadata management, SQLite record persistence, and Module 2 hand-off.</p>
+        </div>
+        <a href="{{ url_for('module1') }}" class="btn btn-secondary">Open Module 1 →</a>
+    </div>
+
+    <!-- MODULE 2 -->
+    <div class="module-card">
+        <div>
+            <span class="card-badge badge-working">STATUS: WORKING</span>
+            <h3>MODULE 2</h3>
+            <p style="font-weight: 600; color: var(--primary-cyan); margin-bottom: 0.5rem;">SHA-256 Hashing Engine</p>
+            <p>Canonicalization pipeline and SHA-256 cryptographic fingerprint generation. Single source of truth for certificate hashing.</p>
+        </div>
+        <a href="{{ url_for('module2') }}" class="btn btn-secondary">Open Module 2 →</a>
+    </div>
+
+    <!-- MODULE 3 -->
+    <div class="module-card">
+        <div>
+            <span class="card-badge badge-working">STATUS: WORKING</span>
+            <h3>MODULE 3</h3>
+            <p style="font-weight: 600; color: var(--primary-cyan); margin-bottom: 0.5rem;">Merkle Tree Builder</p>
+            <p>Groups certificate hashes into a binary Merkle Tree, produces the Merkle Root, and generates verifiable membership proofs.</p>
+        </div>
+        <a href="{{ url_for('module3') }}" class="btn btn-secondary">Open Module 3 →</a>
+    </div>
+
+    <!-- MODULE 4 -->
+    <div class="module-card">
+        <div>
+            <span class="card-badge badge-working">STATUS: WORKING</span>
+            <h3>MODULE 4</h3>
+            <p style="font-weight: 600; color: var(--primary-cyan); margin-bottom: 0.5rem;">Block Chaining</p>
+            <p>Wraps Merkle roots into timestamped blocks, links blocks sequentially via previous_root, and verifies overall chain integrity.</p>
+        </div>
+        <a href="{{ url_for('module4') }}" class="btn btn-secondary">Open Module 4 →</a>
+    </div>
+</div>
+{% endblock %}

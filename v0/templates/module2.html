@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block title %}Module 2 — SHA-256 Hashing Engine{% endblock %}
+
+{% block content %}
+<!-- PIPELINE STEP INDICATOR BAR -->
+<div style="background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem 1.5rem; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+    <div style="font-weight: 700; color: var(--primary-cyan); font-size: 0.9rem; text-transform: uppercase;">Pipeline Tracker:</div>
+    <div style="display: flex; gap: 0.75rem; font-size: 0.85rem; flex-wrap: wrap; align-items: center;">
+        <span style="color: var(--text-muted);">1. Form Entry</span>
+        <span style="color: var(--text-muted);">➔</span>
+        <span style="background: var(--primary-cyan); color: #0f172a; font-weight: 700; padding: 0.3rem 0.7rem; border-radius: 20px;">2. SHA-256 Hasher (Active)</span>
+        <span style="color: var(--text-muted);">➔</span>
+        <span style="color: var(--text-muted);">3. Merkle Tree</span>
+        <span style="color: var(--text-muted);">➔</span>
+        <span style="color: var(--text-muted);">4. Block Chaining</span>
+    </div>
+</div>
+
+<div class="page-title-section">
+    <h1 class="page-title">MODULE 2: SHA-256 Hashing Engine</h1>
+    <p class="page-subtitle">Canonicalization Pipeline, Deterministic SHA-256 Fingerprinting & Avalanche Tamper Metrics</p>
+</div>
+
+<!-- ARCHITECTURE PIPELINE BOX -->
+<div style="background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; margin-bottom: 2.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3 style="color: var(--primary-cyan); font-size: 1.1rem;">Module 2 Canonical Hashing Pipeline</h3>
+        <a href="{{ url_for('module3') }}" class="btn btn-primary" style="font-size: 0.85rem;">
+            ➡️ Proceed to Module 3: Merkle Tree Builder →
+        </a>
+    </div>
+    
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; text-align: center;">
+        <div style="background: #0f172a; padding: 1rem 1.5rem; border-radius: 8px; border: 1px solid var(--border-color); flex: 1; min-width: 160px;">
+            <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">STEP 1</div>
+            <div style="font-weight: 600; margin-top: 0.25rem;">Form Data (M1)</div>
+            <div style="font-size: 0.75rem; color: #a5f3fc; margin-top: 0.2rem;">{{ selected_cert.certificate_id if selected_cert else 'CC001' }}</div>
+        </div>
+        <div style="color: var(--primary-cyan); font-size: 1.5rem;">➔</div>
+        <div style="background: #0f172a; padding: 1rem 1.5rem; border-radius: 8px; border: 1px solid var(--border-color); flex: 1; min-width: 160px;">
+            <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">STEP 2</div>
+            <div style="font-weight: 600; margin-top: 0.25rem;">Canonicalization (v1.0)</div>
+            <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.2rem;">7 Pipe Fields</div>
+        </div>
+        <div style="color: var(--primary-cyan); font-size: 1.5rem;">➔</div>
+        <div style="background: #0f172a; padding: 1rem 1.5rem; border-radius: 8px; border: 1px solid var(--border-color); flex: 1; min-width: 160px;">
+            <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">STEP 3</div>
+            <div style="font-weight: 600; margin-top: 0.25rem;">SHA-256 Engine</div>
+            <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.2rem;">256 Bits</div>
+        </div>
+        <div style="color: var(--primary-cyan); font-size: 1.5rem;">➔</div>
+        <div style="background: #0f172a; padding: 1rem 1.5rem; border-radius: 8px; border: 1px dashed var(--primary-cyan); flex: 1; min-width: 160px;">
+            <div style="font-size: 0.75rem; color: var(--primary-cyan); font-weight: 600;">OUTPUT</div>
+            <div style="font-weight: 600; color: #38bdf8; margin-top: 0.25rem;">64-Hex Digest</div>
+            <div style="font-size: 0.75rem; color: #34d399; margin-top: 0.2rem;">{{ hash_result.certificate_hash[:12] if hash_result else '' }}...</div>
+        </div>
+    </div>
+</div>
+
+<!-- LIVE INSPECTION FOR SELECTED CERTIFICATE -->
+{% if selected_cert and hash_result %}
+<div style="background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; margin-bottom: 2.5rem;">
+    <h3 style="margin-bottom: 1rem; color: #ffffff;">
+        Inspecting Certificate: <span style="color: #a5f3fc;">{{ selected_cert.certificate_id }}</span> — {{ selected_cert.student_name }}
+    </h3>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+        <div>
+            <label style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 0.4rem;">MODULE 2 CANONICAL STRING (UTF-8 PIPE-DELIMITED):</label>
+            <div class="code-box" style="font-size: 0.8rem; color: #94a3b8;">{{ hash_result.canonical_data }}</div>
+        </div>
+        <div>
+            <label style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 0.4rem;">GENERATED 64-HEX SHA-256 FINGERPRINT:</label>
+            <div class="code-box" style="font-size: 0.85rem; color: #38bdf8; font-weight: 600;">{{ hash_result.certificate_hash }}</div>
+        </div>
+    </div>
+
+    <!-- PROCEED ACTION BANNER -->
+    <div style="background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: 8px; padding: 1rem; display: flex; align-items: center; justify-content: space-between;">
+        <div>
+            <strong style="color: #ffffff;">Ready for Merkle Tree Ingestion (Module 3):</strong>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">
+                This SHA-256 hash will serve as a leaf node in the Merkle Tree for batching.
+            </p>
+        </div>
+        <a href="{{ url_for('module3', batch_id='SEM1_2026') }}" class="btn btn-primary">
+            ➡️ Proceed to Module 3: Build Merkle Tree →
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<!-- LIVE INTERACTIVE TAMPER TEST -->
+<div style="background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; margin-bottom: 2.5rem;">
+    <h3 style="margin-bottom: 0.5rem; color: #ffffff;">Live Module 2 Tamper & Avalanche Demonstration</h3>
+    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
+        Modify a single field on a certificate to observe SHA-256 tamper detection and the bitwise Avalanche Effect live.
+    </p>
+
+    <form action="{{ url_for('module2_tamper') }}" method="POST" style="margin-bottom: 1.5rem;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+                <label>Select Target Certificate</label>
+                <select name="cert_id" class="form-control">
+                    {% for c in certificates %}
+                        <option value="{{ c.certificate_id }}" {% if selected_id == c.certificate_id %}selected{% endif %}>
+                            {{ c.certificate_id }} — {{ c.student_name }} (CGPA: {{ c.cgpa }})
+                        </option>
+                    {% else %}
+                        <option value="CC001">CC001 — Rahul Sharma (CGPA: 9.20)</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Field to Alter</label>
+                <select name="field_name" class="form-control">
+                    <option value="cgpa" {% if field_name == 'cgpa' %}selected{% endif %}>CGPA (e.g. 9.20 → 9.99)</option>
+                    <option value="student_name" {% if field_name == 'student_name' %}selected{% endif %}>Student Name (e.g. Rahul Sharma → Rahul SharmA)</option>
+                    <option value="roll_number" {% if field_name == 'roll_number' %}selected{% endif %}>Roll Number (e.g. A101 → A102)</option>
+                    <option value="course" {% if field_name == 'course' %}selected{% endif %}>Course (e.g. AI & DS → AI & ML)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>New Value</label>
+                <input type="text" name="new_value" class="form-control" value="{{ new_value or '9.99' }}" placeholder="9.99">
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">⚡ RUN MODULE 2 TAMPER TEST</button>
+    </form>
+
+    {% if tamper_result %}
+        <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-color); border-radius: 8px; padding: 1.25rem; margin-top: 1.5rem;">
+            <div class="alert alert-{% if tamper_result.hash_changed %}success{% else %}danger{% endif %}" style="margin-bottom: 1.25rem;">
+                <strong style="font-size: 1.1rem;">
+                    {% if tamper_result.hash_changed %}
+                        PASS — CERTIFICATE ALTERATION DETECTED
+                    {% else %}
+                        FAIL — NO ALTERATION DETECTED
+                    {% endif %}
+                </strong>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.25rem;">
+                <div>
+                    <h5 style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; margin-bottom: 0.4rem;">ORIGINAL CERTIFICATE HASH (HASH A)</h5>
+                    <div class="code-box" style="font-size: 0.8rem; color: #34d399;">{{ tamper_result.hash_a }}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.4rem;">Canonical: {{ tamper_result.canonical_a }}</div>
+                </div>
+                <div>
+                    <h5 style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; margin-bottom: 0.4rem;">TAMPERED CERTIFICATE HASH (HASH B)</h5>
+                    <div class="code-box" style="font-size: 0.8rem; color: #f87171;">{{ tamper_result.hash_b }}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.4rem;">Canonical: {{ tamper_result.canonical_b }}</div>
+                </div>
+            </div>
+
+            <div style="background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.2); border-radius: 8px; padding: 1rem;">
+                <h5 style="color: var(--primary-cyan); font-size: 0.85rem; margin-bottom: 0.5rem;">CRYPTOGRAPHIC AVALANCHE METRICS (SHA-256)</h5>
+                <div style="display: flex; gap: 2rem; font-size: 0.9rem;">
+                    <div>Bitwise Hamming Distance: <strong style="color: #ffffff;">{{ tamper_result.avalanche.hamming_distance }} bits</strong> (out of 256)</div>
+                    <div>Bit Flip Percentage: <strong style="color: #38bdf8;">{{ tamper_result.avalanche.bit_flip_percentage }}%</strong> (Target ~50%)</div>
+                    <div>Hash Changed: <strong style="color: var(--accent-green);">{{ 'YES' if tamper_result.hash_changed else 'NO' }}</strong></div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
